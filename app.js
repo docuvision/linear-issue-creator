@@ -96,7 +96,7 @@ async function main() {
 
   // find the user by string
   const user = await linearUserFind(assignUser);
-  const userId = user && user.id; // userId is null if not found
+  let userId = user && user.id; // userId is null if not found
 
   // unsign the user from the ticket
   if (gh_action == 'unlabeled')
