@@ -1,31 +1,28 @@
-# Linear App github acton
+# Linear App Issue Creator github acton
 
-This action pots a comment in a related linear ticket
+This action creates an sub issue in a related linear ticket
 
 ## Inputs
 
-### `message`
+### `linear-key`
 
-**Required** The message you want to be displayed in the comment. Default `"I am a robot"`.
+**Required** The linear API key. Default ``.
 
 ## Outputs
 
-### `time`
+### `url`
 
 The time the ticket was created.
 
 ## Example usage
 
 ```
-- name: Create Linear Comment
-id: linear_app
+- name: Create Linear Issues
+id: linear_issues_creator
 uses: teebu/linear_app@v1.6
 with:
-  message: |
-    Great success!
-env:
-  LINEAR_API_KEY: KEYHERE
+  linear-key: 1234567
 ```
 
 ## Tags:
-git tag -a v1.8 -m "update version"
+git tag -a v1.0 -m "update version"

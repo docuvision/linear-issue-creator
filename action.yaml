@@ -2,22 +2,30 @@ name: 'Linear PR Issue Creator '
 author: Teebu
 description: 'Creates issues for PRs with assigned labels'
 inputs:
-  title:
-    description: 'title for sub issue'
+  linear-key:
+    description: 'linear api key'
     required: true
-    default: 'title'
-  status:
-    description: 'status'
+    default: ''
+  due-in-days:
+    description: 'Due in days'
+    required: false
+    default: '1'
+  issue-state:
+    description: 'Issue state (Todo)'
     required: false
     default: 'Todo'
-  assignee:
-    description: 'assignee label'
+  issue-label:
+    description: 'Label assigned to issue (PR Review)'
     required: false
-    default: ''
-  message:  # description for PR
-    description: 'description for sub issue'
-    required: true
-    default: 'Review me PR!'
+    default: 'PR Review'
+  priority:
+    description: 'Issue priority'
+    required: false
+    default: '2'
+  estimate:
+    description: 'Issue estimate'
+    required: false
+    default: '2'
 outputs:
   url: # url output
     description: 'The url of the created issue'

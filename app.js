@@ -1,17 +1,36 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
 const linear = require("@linear/sdk");
-const linearClient = new linear.LinearClient({ 'apiKey': process.env.LINEAR_API_KEY });
 
 let statesCache = {};
-let branch = process.env.GITHUB_HEAD_REF // "refs/heads/feature/doc-490-evaluate-pull-request-deployment-of"
-const payload = JSON.stringify(github.context.payload, undefined, 2)
 
-// todo: fill in values from payload
-const PRClosed = false; // simulate a closed PR
-const changesRequested = true; // simulate changes requested
-const gh_label = 'review_req_yuriy'; // 'review_req_dani3lsz' - display names are case sensitive
-//let body = core.getInput('message');
+const linearKey = core.getInput('linear-key');
+const linearClient = new linear.LinearClient({ 'apiKey': linearKey }); // process.env.LINEAR_API_KEY
+const dueInDays = core.getInput('due-in-days');
+const initialIssueState = core.getInput('issue-state');
+const issueLabel = core.getInput('issue-label');
+const issuePriority = core.getInput('priority');
+const issueEstimate = core.getInput('estimate');
+
+const payload = JSON.stringify(github.context.payload, undefined, 2)
+console.log(payload);
+
+// fill in values from payload
+const gh_action = github.context.payload.action; // labeled, unlabeled, closed (no label in root)
+const gh_label = github.context.payload.label || null; // 'review_req_dani3lsz'
+const branch = process.env.GITHUB_HEAD_REF // "refs/heads/feature/doc-490-evaluate-pull-request-deployment-of"
+const PRClosed = gh_action == 'closed' ? true : false;
+// const changesRequested = true; // does it have a trigger?
+
+// ACTIONS: labeled, unlabeled, closed (no label in root)
+// {
+//   "action": "unlabeled",
+//   "label": {
+//     "default": true,
+//     "description": "Improvements or additions to documentation",
+//     "name": "documentation",
+//     "node_id": "MDU6TGFiZWwzMjU0MTE5MzIx",
+// },
 
 async function main() {
   const issueId = parse_ref(branch);
@@ -23,17 +42,26 @@ async function main() {
   const _teamId = issue._team.id;
   const _parentId = issue.id;
   const _cycleId = issue._cycle && issue._cycle.id || null;
-  const desiredState = PRClosed ? 'QA' : 'Todo';
-  const desiredStateId = await getStateId(_teamId, desiredState); // Todo | QA
+
+  const desiredState = PRClosed ? 'QA' : initialIssueState;
+  const desiredStateId = await getStateId(_teamId, desiredState); // 'Todo' || 'QA'
+
+  const labelId = await getLabelId(teamId, issueLabel); // in the team find get label id
+
   const createIssueTitle = `🤞 PR Review: ${branch}`;
   const description = `Hey, this is the description of my awesome new feature. Review it asap.
     Go here and review: https://github.com/docuvision/Redacted.ai/pull/1008`;
-  const assignUser = parse_user_label(gh_label);
+  const assignUser = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
+
+  let dueDay = new Date(new Date());
+  dueDay.setDate(dueDay.getDate() + dueInDays);
+  if (!dueInDays) dueDay = null;
 
   if (!assignUser) {
-    console.log('no user found');
+    console.log('no user found in label, skipping action');
     return;
   }
+
   // find the user by string
   const user = await linearUserFind(assignUser);
   const userId = user.id;
@@ -43,17 +71,17 @@ async function main() {
 
   if (!foundIssue) {  // create subissue
     console.log('creating new sub issue');
-    await createIssue(null, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId);
+    await createIssue(null, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate);
 
   } else if (foundIssue && (userId != foundIssue._assignee.id || foundIssue._state.id != desiredStateId)) {
-    // if issue exists but assignee doesnt match, update issue with new assignee's id
+    // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA
     console.log('issue already there, going to update it');
-    await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId);
+    await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate);
 
   } else if (foundIssue && PRClosed) {
     // set issue to status: QA
     console.log('issue found and PRClosed, going to set it to QA');
-    await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId);
+    await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId), labelId, issuePriority, issueEstimate;
 
   } else {
     console.log('issue already exists');
@@ -63,19 +91,13 @@ async function main() {
 }
 
 async function createIssue(
-  id = null, title, teamId, parentId, cycleId, description, assigneeId,
-  desiredStateId, label = 'PR Review', priority = 2, estimate = 2) {
+  id = null, title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
   // Create a subissue for label and assignee
-
-  const labelId = await getLabelId(teamId, label); // in team, get label id
-  const tomorrow = new Date(new Date());
-  tomorrow.setDate(tomorrow.getDate() + 1);
 
   const createPayload = await linearClient.issueCreate(
     {
-      id, title, teamId, parentId, cycleId, description, assigneeId, priority, estimate,
+      id, title, teamId, parentId, cycleId, description, assigneeId, priority, estimate, dueDate,
       stateId: desiredStateId, // issue status
-      dueDate: tomorrow, // looks like its rounding dates
       labelIds: [labelId],
     });
 
@@ -88,18 +110,11 @@ async function createIssue(
 }
 
 async function updateIssue(
-  id, title, teamId, parentId, cycleId, description, assigneeId,
-  desiredStateId, label = 'PR Review', priority = 2, estimate = 2) {
-
-  const labelId = await getLabelId(teamId, label); // in team, get label id
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  id, title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
 
   const createPayload = await linearClient.issueUpdate(id, {
-    title, teamId, parentId, cycleId, description, assigneeId, priority, estimate,
+    title, teamId, parentId, cycleId, description, assigneeId, priority, estimate, dueDate,
     stateId: desiredStateId, // issue status
-    dueDate: tomorrow, // looks like its rounding dates
     labelIds: [labelId],
   });
 
