@@ -57,7 +57,6 @@ async function main() {
   // if PRClosed and !isMerged set to 'Canceled'
   // if reviewState == 'approve' we set to 'QA'
   // if reviewState == 'changes requested' we set to 'Todo'
-  //
   if (PRClosed && !isMerged) {
     desiredState = 'Canceled';
   } else if (PRClosed || reviewState == 'approved') {
@@ -99,6 +98,10 @@ async function main() {
   const user = await linearUserFind(assignUser);
   const userId = user && user.id; // userId is null if not found
 
+  // unsign the user from the ticket
+  if (gh_action == 'unlabeled')
+    userId = null;
+
   // find issue with title with parent id
   const foundIssue = await linearIssueFind(createIssueTitle, _parentId);
 
@@ -139,13 +142,13 @@ async function createIssue(title, teamId, parentId, cycleId, description, assign
 async function updateIssue(id, title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
 
   const options = {
-    title, teamId, parentId, cycleId, description, priority, estimate, dueDate,
+    title, teamId, parentId, cycleId, description, priority, estimate, dueDate, assigneeId,
     stateId: desiredStateId, // issue status
     labelIds: [labelId],
   }
 
   // add assigneeId only if we pass, otherwise keep the same assignee
-  if (assigneeId) options.assigneeId = assigneeId;
+  // if (assigneeId) options.assigneeId = ;
 
   const createPayload = await linearClient.issueUpdate(id, options);
 
