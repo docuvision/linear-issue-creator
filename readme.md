@@ -18,8 +18,8 @@ The time the ticket was created.
 
 ```
 - name: Create Linear Issues
-id: linear_issues_creator
-uses: teebu/linear_app@v1.6
+id: linear-issues-creator
+uses: teebu/linear-issue-creator@master
 with:
   linear-key: 1234567
 ```
