@@ -109,7 +109,7 @@ async function main() {
     console.log('creating new sub issue');
     await createIssue(createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay);
 
-  } else if (foundIssue && (userId != foundIssue._assignee.id || foundIssue._state.id != desiredStateId)) {
+  } else if (foundIssue && (userId != (foundIssue._assignee && foundIssue._assignee.id) || foundIssue._state.id != desiredStateId)) {
     // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA
     console.log('sub issue already there, going to update it');
     await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay);
