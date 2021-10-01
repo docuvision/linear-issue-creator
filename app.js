@@ -130,7 +130,7 @@ async function linearIssueFind(title, parentId) {
   const { nodes: found } = await linearClient.issueSearch(title);
   if (found.length === 0) return null;
 
-  return found.find((issue) => issue._parent.id === parentId) ?? null;
+  return found.find((issue) => issue._parent.id === parentId) || null;
 }
 
 async function linearUserFind(userName) {
