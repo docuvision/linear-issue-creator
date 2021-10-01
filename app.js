@@ -75,7 +75,7 @@ async function main() {
 
   const createIssueTitle = `🍯 PR Review: ${branch}`;
   const description = `# [${github.context.payload.pull_request.title}](${github.context.payload.pull_request.html_url})
-  
+  *${github.context.payload.pull_request.created_at}*
   
   ${github.context.payload.pull_request.body}
   
