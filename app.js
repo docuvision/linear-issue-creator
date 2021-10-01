@@ -51,7 +51,7 @@ async function main() {
   const desiredState = PRClosed ? 'QA' : initialIssueState;
   const desiredStateId = await getStateId(_teamId, desiredState); // 'Todo' || 'QA'
 
-  const labelId = await getLabelId(teamId, issueLabel); // in the team find get label id
+  const labelId = await getLabelId(_teamId, issueLabel); // in the team find get label id
 
   const createIssueTitle = `🤞 PR Review: ${branch}`;
   const description = `Hey, this is the description of my awesome new feature. Review it asap.
