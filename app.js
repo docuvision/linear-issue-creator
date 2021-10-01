@@ -82,14 +82,14 @@ async function main() {
   dueDay.setDate(dueDay.getDate() + dueInDays);
   if (!dueInDays || dueDay <= 0) dueDay = null;
 
-  if (gh_action == 'labeled' && !assignUser) {
+  if ((gh_action == 'labeled' || gh_action == 'unlabeled') && !assignUser) {
     console.log('no user found in label, not a good lable');
     return;
   }
 
   // find the user by string
   const user = await linearUserFind(assignUser);
-  const userId = user && user.id;
+  const userId = user && user.id; // userId is null if not found
 
   // find issue with title with parent id
   const foundIssue = await linearIssueFind(createIssueTitle, _parentId);
