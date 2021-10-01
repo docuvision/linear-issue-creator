@@ -157,6 +157,8 @@ async function linearIssueFind(title, parentId) {
 }
 
 async function linearUserFind(userName) {
+  if (!userName) userName = '';
+
   const { nodes: found } = await linearClient.users({
       includeArchived: false,
       first: 100,
