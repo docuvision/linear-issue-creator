@@ -36,6 +36,11 @@ async function main() {
   const issueId = parse_ref(branch);
   console.log('issueId:', issueId);
 
+  if (!issueId) {
+    console.log('Unable to detect issueId from branch name');
+    return;
+  }
+
   const issue = await linearClient.issue(issueId);
   console.log(issue);
 
