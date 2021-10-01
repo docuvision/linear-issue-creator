@@ -74,7 +74,7 @@ async function main() {
   const labelId = await getLabelId(_teamId, issueLabel); // in the team find get label id
 
   const createIssueTitle = `🍯 PR Review: ${branch}`;
-  const description = `### ${github.context.payload.pull_request.title}
+  const description = `# Title: ${github.context.payload.pull_request.title}
   
   ${github.context.payload.pull_request.body}
   
