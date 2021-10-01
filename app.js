@@ -6,7 +6,7 @@ let statesCache = {};
 
 const linearKey = core.getInput('linear-key');
 const linearClient = new linear.LinearClient({ 'apiKey': linearKey }); // process.env.LINEAR_API_KEY
-const dueInDays = core.getInput('due-in-days');
+const dueInDays = parseInt(core.getInput('due-in-days'));
 const initialIssueState = core.getInput('issue-state');
 const issueLabel = core.getInput('issue-label');
 const issuePriority = parseInt(core.getInput('priority'));
@@ -60,7 +60,7 @@ async function main() {
 
   let dueDay = new Date(new Date());
   dueDay.setDate(dueDay.getDate() + dueInDays);
-  if (!dueInDays) dueDay = null;
+  if (!dueInDays || dueDay <= 0) dueDay = null;
 
   if (!assignUser) {
     console.log('no user found in label, skipping action');
