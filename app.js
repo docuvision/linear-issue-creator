@@ -17,7 +17,7 @@ console.log(payload);
 
 // fill in values from payload
 const gh_action = github.context.payload.action; // labeled, unlabeled, closed (no label in root)
-const gh_label = github.context.payload.label || null; // 'review_req_dani3lsz'
+const gh_label = github.context.payload.label && github.context.payload.label.name || null; // 'review_req_dani3lsz'
 const branch = process.env.GITHUB_HEAD_REF // "refs/heads/feature/doc-490-evaluate-pull-request-deployment-of"
 const PRClosed = gh_action == 'closed' ? true : false;
 // const changesRequested = true; // does it have a trigger?
