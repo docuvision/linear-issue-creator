@@ -18,11 +18,14 @@ console.log(payload);
 // fill in values from payload
 const gh_action = github.context.payload.action; // labeled, unlabeled, closed (no label in root)
 const gh_label = github.context.payload.label && github.context.payload.label.name || null; // 'review_req_dani3lsz'
-const branch = process.env.GITHUB_HEAD_REF // "refs/heads/feature/doc-490-evaluate-pull-request-deployment-of"
+//process.env.GITHUB_HEAD_REF == "refs/heads/feature/doc-490-evaluate-pull-request-deployment-of"
+const branch = github.context.payload.head && github.context.payload.head.ref; // feature/fe-2379-testing-fe-linear
 const PRClosed = gh_action == 'closed' ? true : false;
+const reviewState = github.context.payload.review && github.context.payload.review.state; // approved, commented, changes requested?
+const isMerged = !!(github.context.payload.merged);
 // const changesRequested = true; // does it have a trigger?
 
-// ACTIONS: labeled, unlabeled, closed (no label in root)
+// ACTIONS: labeled, unlabeled, closed (no label in root), submitted (no label in root)
 // {
 //   "action": "unlabeled",
 //   "label": {
@@ -48,8 +51,23 @@ async function main() {
   const _parentId = issue.id;
   const _cycleId = issue._cycle && issue._cycle.id || null;
 
-  const desiredState = PRClosed ? 'QA' : initialIssueState;
-  const desiredStateId = await getStateId(_teamId, desiredState); // 'Todo' || 'QA'
+  let desiredState;
+  // if PRClosed == true we set to 'QA'
+  // if PRClosed and isMerged set to 'Canceled'
+  // if reviewState == 'approve' we set to 'QA'
+  // if reviewState == 'changes requested' we set to 'Todo'
+  //
+  if (PRClosed || reviewState == 'approved') {
+    desiredState = 'QA';
+  } else if (reviewState == 'changes_requested') {
+    desiredState = 'Changes Requested';
+  } else if (PRClosed && isMerged) {
+    desiredState = 'Canceled';
+  } else {
+    desiredState = initialIssueState;
+  }
+
+  const desiredStateId = await getStateId(_teamId, desiredState); // get the id of that state
 
   const labelId = await getLabelId(_teamId, issueLabel); // in the team find get label id
 
@@ -62,8 +80,8 @@ async function main() {
   dueDay.setDate(dueDay.getDate() + dueInDays);
   if (!dueInDays || dueDay <= 0) dueDay = null;
 
-  if (!assignUser) {
-    console.log('no user found in label, skipping action');
+  if (gh_action == 'labeled' && !assignUser) {
+    console.log('no user found in label, not a good lable');
     return;
   }
 
@@ -81,11 +99,6 @@ async function main() {
   } else if (foundIssue && (userId != foundIssue._assignee.id || foundIssue._state.id != desiredStateId)) {
     // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA
     console.log('sub issue already there, going to update it');
-    await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay);
-
-  } else if (foundIssue && PRClosed) {
-    // set issue to status: QA
-    console.log('sub issue found and PRClosed, going to set it to QA');
     await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay);
 
   } else {
@@ -115,11 +128,16 @@ async function createIssue(title, teamId, parentId, cycleId, description, assign
 
 async function updateIssue(id, title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
 
-  const createPayload = await linearClient.issueUpdate(id, {
-    title, teamId, parentId, cycleId, description, assigneeId, priority, estimate, dueDate,
+  const options = {
+    title, teamId, parentId, cycleId, description, priority, estimate, dueDate,
     stateId: desiredStateId, // issue status
     labelIds: [labelId],
-  });
+  }
+
+  // add assigneeId only if we pass, otherwise keep the same assignee
+  if (assigneeId) options.assigneeId = assigneeId;
+
+  const createPayload = await linearClient.issueUpdate(id, options);
 
   if (createPayload.success) {
     console.log(createPayload);
