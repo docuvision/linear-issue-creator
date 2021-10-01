@@ -19,7 +19,7 @@ console.log(payload);
 const gh_action = github.context.payload.action; // labeled, unlabeled, closed (no label in root)
 const gh_label = github.context.payload.label && github.context.payload.label.name || null; // 'review_req_dani3lsz'
 //process.env.GITHUB_HEAD_REF == "refs/heads/feature/doc-490-evaluate-pull-request-deployment-of"
-const branch = github.context.payload.head && github.context.payload.head.ref; // feature/fe-2379-testing-fe-linear
+const branch = github.context.payload.pull_request && github.context.payload.pull_request.head && github.context.payload.pull_request.head.ref; // feature/fe-2379-testing-fe-linear
 const PRClosed = gh_action == 'closed' ? true : false;
 const reviewState = github.context.payload.review && github.context.payload.review.state; // approved, commented, changes requested?
 const isMerged = !!(github.context.payload.merged);
