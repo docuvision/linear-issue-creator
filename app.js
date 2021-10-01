@@ -21,8 +21,8 @@ const gh_label = github.context.payload.label && github.context.payload.label.na
 //process.env.GITHUB_HEAD_REF == "refs/heads/feature/doc-490-evaluate-pull-request-deployment-of"
 const branch = github.context.payload.pull_request && github.context.payload.pull_request.head && github.context.payload.pull_request.head.ref; // feature/fe-2379-testing-fe-linear
 const PRClosed = gh_action == 'closed' ? true : false;
-const reviewState = github.context.payload.review && github.context.payload.review.state; // approved, commented, changes requested?
-const isMerged = !!(github.context.payload.merged);
+const reviewState = github.context.payload.review && github.context.payload.review.state; // approved, commented, changes_requested
+const isMerged = !!(github.context.payload.pull_request && github.context.payload.pull_request.merged);
 // const changesRequested = true; // does it have a trigger?
 
 // ACTIONS: labeled, unlabeled, closed (no label in root), submitted (no label in root)
