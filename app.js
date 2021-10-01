@@ -54,16 +54,16 @@ async function main() {
 
   let desiredState;
   // if PRClosed == true we set to 'QA'
-  // if PRClosed and isMerged set to 'Canceled'
+  // if PRClosed and !isMerged set to 'Canceled'
   // if reviewState == 'approve' we set to 'QA'
   // if reviewState == 'changes requested' we set to 'Todo'
   //
-  if (PRClosed || reviewState == 'approved') {
+  if (PRClosed && !isMerged) {
+    desiredState = 'Canceled';
+  } else if (PRClosed || reviewState == 'approved') {
     desiredState = 'QA';
   } else if (reviewState == 'changes_requested') {
     desiredState = 'Changes Requested';
-  } else if (PRClosed && isMerged) {
-    desiredState = 'Canceled';
   } else {
     desiredState = initialIssueState;
   }
@@ -89,7 +89,7 @@ async function main() {
 
   // find the user by string
   const user = await linearUserFind(assignUser);
-  const userId = user.id;
+  const userId = user && user.id;
 
   // find issue with title with parent id
   const foundIssue = await linearIssueFind(createIssueTitle, _parentId);
