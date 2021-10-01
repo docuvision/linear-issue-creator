@@ -9,8 +9,8 @@ const linearClient = new linear.LinearClient({ 'apiKey': linearKey }); // proces
 const dueInDays = core.getInput('due-in-days');
 const initialIssueState = core.getInput('issue-state');
 const issueLabel = core.getInput('issue-label');
-const issuePriority = core.getInput('priority');
-const issueEstimate = core.getInput('estimate');
+const issuePriority = parseInt(core.getInput('priority'));
+const issueEstimate = parseInt(core.getInput('estimate'));
 
 const payload = JSON.stringify(github.context.payload, undefined, 2)
 console.log(payload);
