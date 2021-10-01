@@ -38,6 +38,7 @@ const isMerged = !!(github.context.payload.pull_request && github.context.payloa
 async function main() {
   const issueId = parse_ref(branch);
   console.log('issueId:', issueId);
+  console.log('gh_action:', gh_action);
 
   if (!issueId) {
     console.log('Unable to detect issueId from branch name');
@@ -67,6 +68,7 @@ async function main() {
     desiredState = initialIssueState;
   }
 
+  console.log('desiredState:', desiredState);
   const desiredStateId = await getStateId(_teamId, desiredState); // get the id of that state
 
   const labelId = await getLabelId(_teamId, issueLabel); // in the team find get label id
