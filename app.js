@@ -76,8 +76,7 @@ async function main() {
 
   if (!foundIssue) {  // create subissue
     console.log('creating new sub issue');
-    await createIssue(
-      null, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay);
+    await createIssue(createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay);
 
   } else if (foundIssue && (userId != foundIssue._assignee.id || foundIssue._state.id != desiredStateId)) {
     // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA
@@ -96,13 +95,12 @@ async function main() {
   console.log('done');
 }
 
-async function createIssue(
-  id = null, title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
+async function createIssue(title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
   // Create a subissue for label and assignee
 
   const createPayload = await linearClient.issueCreate(
     {
-      id, title, teamId, parentId, cycleId, description, assigneeId, priority, estimate, dueDate,
+      title, teamId, parentId, cycleId, description, assigneeId, priority, estimate, dueDate,
       stateId: desiredStateId, // issue status
       labelIds: [labelId],
     });
@@ -115,8 +113,7 @@ async function createIssue(
   }
 }
 
-async function updateIssue(
-  id, title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
+async function updateIssue(id, title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
 
   const createPayload = await linearClient.issueUpdate(id, {
     title, teamId, parentId, cycleId, description, assigneeId, priority, estimate, dueDate,
