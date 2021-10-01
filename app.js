@@ -74,16 +74,14 @@ async function main() {
   const labelId = await getLabelId(_teamId, issueLabel); // in the team find get label id
 
   const createIssueTitle = `😎 PR Review: ${branch}`;
-  const description = `### ${github.context.payload.pull_request.Title}
+  const description = `### ${github.context.payload.pull_request.title}
   
   ${github.context.payload.pull_request.body}
   
-  -- 
+  ----------------------------------------
   changed files: ${github.context.payload.pull_request.changed_files}
   commits: ${github.context.payload.pull_request.commits}
-  comments:  ${github.context.payload.pull_request.comments}
-  diff url: ${github.context.payload.pull_request.diff_url}
-  issue url: ${github.context.payload.pull_request.issue_url}
+  github url: ${github.context.payload.pull_request.html_url}
   `;
 
   const assignUser = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
