@@ -1,0 +1,26 @@
+name: 'Linear PR Issue Creator '
+author: Teebu
+description: 'Creates issues for PRs with assigned labels'
+inputs:
+  title:
+    description: 'title for sub issue'
+    required: true
+    default: 'title'
+  status:
+    description: 'status'
+    required: false
+    default: 'Todo'
+  assignee:
+    description: 'assignee label'
+    required: false
+    default: ''
+  message:  # description for PR
+    description: 'description for sub issue'
+    required: true
+    default: 'Review me PR!'
+outputs:
+  url: # url output
+    description: 'The url of the created issue'
+runs:
+  using: 'node12'
+  main: 'app.js'
