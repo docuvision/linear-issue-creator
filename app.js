@@ -154,8 +154,9 @@ async function main() {
       });
     }
 
-  } else if (doneStateId == foundIssue._state.id || canceledStateId == foundIssue._state.id) {
-    // if issue is in Done or Cancelled state, dont do anything to it
+  } else if (gh_action != 'reopened' && (doneStateId == foundIssue._state.id || canceledStateId == foundIssue._state.id)) {
+    // if action is not reopened: we'll allow reopening of closed issues
+    // if issue is Done or Cancelled dont do anything to it
     console.log('issue in Done or Canceled state, wont update it');
 
   } else if (foundIssue && (userId != (foundIssue._assignee && foundIssue._assignee.id) || foundIssue._state.id != desiredStateId)) {
