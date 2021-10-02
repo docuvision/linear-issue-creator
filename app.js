@@ -92,7 +92,6 @@ async function main() {
     if (assignedUserLabel) {
       console.log(`existing labels username found in labels: '${assignedUserLabel}'`);
       usernameFromLabel = assignedUserLabel;
-
     }
   }
 
@@ -129,7 +128,7 @@ async function main() {
   dueDay.setDate(dueDay.getDate() + dueInDays);
   if (!dueInDays || dueDay <= 0) dueDay = null;
 
-  // set parent issue state to Changes Requested if reviewState is 'Changes Requested'
+  // set parent issue state if 'Changes Requested' in reviewState
   if (desiredState == 'Changes Requested') {
     await setIssueStatus(_parentId, desiredStateId);
   }
@@ -184,6 +183,9 @@ async function createIssue(title, teamId, parentId, cycleId, description, assign
 
   if (assigneeId) options.assigneeId = assigneeId;            // assign the user if found
   if (assigneeId == 'unassigned') options.assigneeId = null;  // unassign user by passing null, otherwise don't change current user
+
+  console.log('createIssue payload:', JSON.stringify(options));
+
 
   const createPayload = await linearClient.issueCreate(options);
 
@@ -243,12 +245,6 @@ async function linearIssueFind(title, parentId) {
   return found.find((issue) => issue._parent.id === parentId) || null;
 }
 
-function findUserLabelInPR(labels) {
-  // find first username assigned in PRs existing labeles array
-  let foundLabel = labels.find((label) => parse_user_label(label.name) != null);
-  return foundLabel && foundLabel.name && parse_user_label(foundLabel.name) || null;
-}
-
 async function linearUserFind(userName) {
   if (!userName) userName = '';
 
@@ -280,13 +276,20 @@ function parse_ref(ref_head) {
 // parse gh label for reviewed request
 function parse_user_label(label) {
   // review_req_yuriy
-  console.log('label:', label);
+  console.log('parsing label:', label);
 
   if (!label) return null;
 
   const re = /^review_req_(.*)/;
-  console.log(label.match(re));
+  // console.log(label.match(re));
   return label.match(re) && label.match(re)[1];
+}
+
+
+function findUserLabelInPR(labels) {
+  // find first username assigned in PRs existing labeles array
+  let foundLabel = labels.find((label) => parse_user_label(label.name) != null);
+  return foundLabel && foundLabel.name && parse_user_label(foundLabel.name) || null;
 }
 
 async function getStateId(team, desiredState) {
