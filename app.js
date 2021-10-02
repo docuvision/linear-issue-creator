@@ -20,7 +20,7 @@ const payload = JSON.stringify(github.context.payload, undefined, 2);
 console.log(payload);
 
 // fill in values from payload
-const gh_action = github.context.payload.action; // labeled, unlabeled, closed (no label in root)
+const gh_action = github.context.payload.action; // labeled, unlabeled, (no label in root) closed, opened, reopened
 const gh_label = github.context.payload.label && github.context.payload.label.name || null; // 'review_req_dani3lsz'
 const branch = github.context.payload.pull_request && github.context.payload.pull_request.head && github.context.payload.pull_request.head.ref; // feature/fe-2379-testing-fe-linear
 const PRClosed = gh_action == 'closed' ? true : false;
@@ -124,11 +124,13 @@ async function main() {
     console.log('createdIssue url:', createdIssueInfo.url);
     core.setOutput("url", createdIssueInfo.url); // return url as ouput from action
 
-    // add comment of linear url in the current PR
-    const new_comment = octokit.issues.createComment({
-      ...github.context.repo, issue_number: pull_request_number,
-      body: `[New Linear issue created for PR Review, please assign user label on the right -->](${createdIssueInfo.url})`
-    });
+    // add comment of linear url in the current PR if opened, (rarely reopened)
+    if (gh_action == 'opened' || gh_action == 'reopened') {
+      const new_comment = octokit.issues.createComment({
+        ...github.context.repo, issue_number: pull_request_number,
+        body: `[New Linear issue created for PR Review, please assign user label on the right 🤳](${createdIssueInfo.url})`
+      });
+    }
 
   } else if (doneStateId == foundIssue._state.id) { // if issue is in Done state, dont do anything to it
     console.log('issue in Done state, wont update it');
