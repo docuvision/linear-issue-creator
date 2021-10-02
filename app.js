@@ -94,13 +94,13 @@ async function main() {
     return;
   }
 
-  // find the user by string
+  // find the user by username string
   const user = await linearUserFind(assignUser);
   let userId = user && user.id; // userId is null if not found
 
-  // unsign the user from the ticket
-  if (gh_action == 'unlabeled')
-    userId = null;
+  // unsign the user from the ticket if that label contains a real username
+  if (gh_action == 'unlabeled' && userId)
+    userId = 'unassigned';
 
   // find issue with title with parent id
   const foundIssue = await linearIssueFind(createIssueTitle, _parentId);
@@ -110,7 +110,7 @@ async function main() {
     await createIssue(createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay);
 
   } else if (foundIssue && (userId != (foundIssue._assignee && foundIssue._assignee.id) || foundIssue._state.id != desiredStateId)) {
-    // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA
+    // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA (keep user)
     console.log('sub issue already there, going to update it');
     await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay);
 
@@ -142,13 +142,13 @@ async function createIssue(title, teamId, parentId, cycleId, description, assign
 async function updateIssue(id, title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
 
   const options = {
-    title, teamId, parentId, cycleId, description, priority, estimate, dueDate, assigneeId,
+    title, teamId, parentId, cycleId, description, priority, estimate, dueDate,
     stateId: desiredStateId, // issue status
     labelIds: [labelId],
   }
 
-  // add assigneeId only if we pass, otherwise keep the same assignee
-  // if (assigneeId) options.assigneeId = ;
+  // unassign user by passing null, otherwise don't change current user
+  if (assigneeId == 'unassigned') options.assigneeId = null;
 
   const createPayload = await linearClient.issueUpdate(id, options);
 

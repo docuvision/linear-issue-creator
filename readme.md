@@ -25,4 +25,5 @@ with:
 ```
 
 ## Tags:
-git tag -a v1.0 -m "update version"
+git tag -a v1.0.1 -m "update version"
+git push origin v1.0.1
