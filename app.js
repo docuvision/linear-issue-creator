@@ -27,6 +27,7 @@ const PRClosed = gh_action == 'closed' ? true : false;
 const reviewState = github.context.payload.review && github.context.payload.review.state; // approved, commented, changes_requested
 const isMerged = !!(github.context.payload.pull_request && github.context.payload.pull_request.merged);
 const pull_request_number = github.context.payload.pull_request && github.context.payload.pull_request.number;
+const pull_request_labels = github.context.payload.pull_request && github.context.payload.pull_request.labels;
 
 // ACTIONS: labeled, unlabeled, closed (no label in root), submitted (no label in root)
 // {
@@ -71,22 +72,37 @@ async function main() {
     desiredState = initialIssueState;
   }
 
-  const assignUser = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
-  console.log(`user: ${assignUser} from ${gh_label}`);
+  // check label from action
+  let usernameFoundInRootLabel = true;
+  const usernameFromLabel = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
+  console.log(`gh_label username: '${usernameFromLabel}' from: '${gh_label}'`);
 
-  // skip task if no user found in label - only labled has label data
-  if ((gh_action == 'labeled' || gh_action == 'unlabeled') && !assignUser) {
-    console.log('no user found in label, not a good lable. exiting action');
+  // handle 'labeled': skip task if no user found in current action label
+  // note: only labled action has the label data in root
+  if ((gh_action == 'labeled' || gh_action == 'unlabeled') && !usernameFromLabel) {
+    console.log('no user found in labeled action, not a good lable. exiting action');
     return;
   }
 
+  // if we can't get username from 'labeled/unlabeled' action's root label then look into existing PR labels array
+  if (!usernameFromLabel) {
+    console.log('gh_label username not found, falling back to existing labels')
+    usernameFoundInRootLabel = false;
+    const assignedUserLabel = findUserLabelInPR(pull_request_labels);
+    if (assignedUserLabel) {
+      console.log(`existing labels username found in labels: '${assignedUserLabel}'`);
+      usernameFromLabel = assignedUserLabel;
+
+    }
+  }
+
   // find the linear user by username
-  const user = await linearUserFind(assignUser);
+  const user = await linearUserFind(usernameFromLabel);
   let userId = user && user.id; // userId is null if not found
   console.log('userId:', userId);
 
-  // unassign the user from the ticket if that label contains an existing user
-  if (gh_action == 'unlabeled' && userId) {
+  // handle 'unlabeled': unassign the user from the ticket if that root label contains an existing user
+  if (gh_action == 'unlabeled' && usernameFoundInRootLabel && userId) {
     console.log('user found and unlabeled action, going to unassign them from issue');
     userId = 'unassigned';
   }
@@ -223,6 +239,12 @@ async function linearIssueFind(title, parentId) {
   if (found.length === 0) return null;
 
   return found.find((issue) => issue._parent.id === parentId) || null;
+}
+
+function findUserLabelInPR(labels) {
+  // find first username assigned in PRs existing labeles array
+  let foundLabel = labels.find((label) => parse_user_label(label.name) != null);
+  return foundLabel && foundLabel.name && parse_user_label(foundLabel.name) || null;
 }
 
 async function linearUserFind(userName) {
