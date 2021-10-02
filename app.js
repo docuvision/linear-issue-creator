@@ -126,8 +126,7 @@ async function main() {
 
     // add comment of linear url in the current PR
     const new_comment = octokit.issues.createComment({
-      ...github.context.repo,
-      issue_number: pull_request_number,
+      ...github.context.repo, issue_number: pull_request_number,
       body: `PR Review Ticket created: ${createdIssueInfo.url}`
     });
 
