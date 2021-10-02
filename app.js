@@ -110,6 +110,7 @@ async function main() {
   console.log('desiredState:', desiredState);
   const desiredStateId = await getStateId(_teamId, desiredState); // get the id state
   const doneStateId = await getStateId(_teamId, 'Done'); // get the id state
+  const canceledStateId = await getStateId(_teamId, 'Canceled'); // get the id state
 
   const labelId = await getLabelId(_teamId, issueLabel); // in this team, get label id for strng "PR Review"
 
@@ -154,8 +155,9 @@ async function main() {
       });
     }
 
-  } else if (doneStateId == foundIssue._state.id) { // if issue is in Done state, dont do anything to it
-    console.log('issue in Done state, wont update it');
+  } else if (doneStateId == foundIssue._state.id || canceledStateId == foundIssue._state.id) {
+    // if issue is in Done or Cancelled state, dont do anything to it
+    console.log('issue in Done or Canceled state, wont update it');
 
   } else if (foundIssue && (userId != (foundIssue._assignee && foundIssue._assignee.id) || foundIssue._state.id != desiredStateId)) {
     // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA (keep user)
