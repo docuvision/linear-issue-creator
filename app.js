@@ -152,13 +152,16 @@ async function main() {
 
 async function createIssue(title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
   // Create a subissue for label and assignee
+  const options = {
+    title, teamId, parentId, cycleId, description, priority, estimate, dueDate,
+    stateId: desiredStateId, // issue status (ie: QA)
+    labelIds: [labelId],
+  };
 
-  const createPayload = await linearClient.issueCreate(
-    {
-      title, teamId, parentId, cycleId, description, assigneeId, priority, estimate, dueDate,
-      stateId: desiredStateId, // issue status
-      labelIds: [labelId],
-    });
+  if (assigneeId) options.assigneeId = assigneeId;            // assign the user if found
+  if (assigneeId == 'unassigned') options.assigneeId = null;  // unassign user by passing null, otherwise don't change current user
+
+  const createPayload = await linearClient.issueCreate(options);
 
   if (createPayload.success) {
     console.log(createPayload);
