@@ -150,6 +150,8 @@ async function updateIssue(id, title, teamId, parentId, cycleId, description, as
   // unassign user by passing null, otherwise don't change current user
   if (assigneeId == 'unassigned') options.assigneeId = null;
 
+  console.log('updateIssue payload:', JSON.stringify(options))
+
   const createPayload = await linearClient.issueUpdate(id, options);
 
   if (createPayload.success) {
