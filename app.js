@@ -114,8 +114,8 @@ async function main() {
   // find issue with title with parent id
   const foundIssue = await linearIssueFind(createIssueTitle, _parentId);
 
-  if (!foundIssue) {  // create subissue
-    console.log('creating new sub issue');
+  if (!foundIssue) {  // create new issue
+    console.log('creating new issue');
     let createPayload = await createIssue(
       createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay
     );
@@ -137,7 +137,7 @@ async function main() {
 
   } else if (foundIssue && (userId != (foundIssue._assignee && foundIssue._assignee.id) || foundIssue._state.id != desiredStateId)) {
     // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA (keep user)
-    console.log('issue already there, going to update it');
+    console.log('issue already exists but needs updating, going to update it');
     let res = await updateIssue(
       foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId,
       desiredStateId, labelId, issuePriority, issueEstimate, dueDay
