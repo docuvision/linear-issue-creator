@@ -116,11 +116,11 @@ async function main() {
 
   if (!foundIssue) {  // create subissue
     console.log('creating new sub issue');
-    let res = await createIssue(
+    let createPayload = await createIssue(
       createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay
     );
 
-    const createdIssueInfo = await linearIssueGet(res._issue.id);
+    const createdIssueInfo = await linearIssueGet(createPayload._issue.id);
     console.log('createdIssue url:', createdIssueInfo.url);
     core.setOutput("url", createdIssueInfo.url); // return url as ouput from action
 
@@ -161,7 +161,7 @@ async function createIssue(title, teamId, parentId, cycleId, description, assign
 
   if (createPayload.success) {
     console.log(createPayload);
-    return createdIssueInfo;
+    return createPayload;
   } else {
     return new Error("Failed to create issue");
   }
