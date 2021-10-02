@@ -111,6 +111,11 @@ async function main() {
   dueDay.setDate(dueDay.getDate() + dueInDays);
   if (!dueInDays || dueDay <= 0) dueDay = null;
 
+  // set parent issue state if 'Changes Requested' in reviewState
+  if (desiredState == 'Changes Requested') {
+    await setIssueStatus(_parentId, desiredStateId)
+  }
+
   // find issue with title with parent id
   const foundIssue = await linearIssueFind(createIssueTitle, _parentId);
 
@@ -189,6 +194,24 @@ async function updateIssue(id, title, teamId, parentId, cycleId, description, as
   if (createPayload.success) {
     console.log(createPayload);
     return createPayload;
+  } else {
+    return new Error("Failed to update issue");
+  }
+}
+
+// update the state of for issue by id
+async function setIssueStatus(id, desiredStateId) {
+  const options = {
+    stateId: desiredStateId, // issue status (Changes Reqested)
+  };
+
+  console.log('setIssueStatus payload:', JSON.stringify(options));
+
+  const updatePayload = await linearClient.issueUpdate(id, options);
+
+  if (updatePayload.success) {
+    console.log(updatePayload);
+    return updatePayload;
   } else {
     return new Error("Failed to update issue");
   }
