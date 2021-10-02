@@ -12,7 +12,7 @@ const issueLabel = core.getInput('issue-label');
 const issuePriority = parseInt(core.getInput('priority'));
 const issueEstimate = parseInt(core.getInput('estimate'));
 
-const payload = JSON.stringify(github.context.payload, undefined, 2)
+const payload = JSON.stringify(github.context.payload, undefined, 2);
 console.log(payload);
 
 // fill in values from payload
@@ -69,6 +69,7 @@ async function main() {
 
   console.log('desiredState:', desiredState);
   const desiredStateId = await getStateId(_teamId, desiredState); // get the id of that state
+  const doneStateId = await getStateId(_teamId, 'Done'); // get the id of that state
 
   const labelId = await getLabelId(_teamId, issueLabel); // in the team find get label id
 
@@ -91,7 +92,7 @@ async function main() {
   if (!dueInDays || dueDay <= 0) dueDay = null;
 
   if ((gh_action == 'labeled' || gh_action == 'unlabeled') && !assignUser) {
-    console.log('no user found in label, not a good lable');
+    console.log('no user found in label, not a good lable. exiting action');
     return;
   }
 
@@ -109,12 +110,19 @@ async function main() {
 
   if (!foundIssue) {  // create subissue
     console.log('creating new sub issue');
-    await createIssue(createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay);
+    await createIssue(
+      createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay
+    );
+
+  } else if (doneStateId == foundIssue._state.id) { // if issue is in Done state, dont do anything to it
+    console.log('issue is in Done state, wont update it');
 
   } else if (foundIssue && (userId != (foundIssue._assignee && foundIssue._assignee.id) || foundIssue._state.id != desiredStateId)) {
     // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA (keep user)
     console.log('sub issue already there, going to update it');
-    await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay);
+    await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId,
+      desiredStateId, labelId, issuePriority, issueEstimate, dueDay
+    );
 
   } else {
     console.log('sub issue already exists');
@@ -147,12 +155,12 @@ async function updateIssue(id, title, teamId, parentId, cycleId, description, as
     title, teamId, parentId, cycleId, description, priority, estimate, dueDate,
     stateId: desiredStateId, // issue status
     labelIds: [labelId],
-  }
+  };
 
-  // unassign user by passing null, otherwise don't change current user
-  if (assigneeId == 'unassigned') options.assigneeId = null;
+  if (assigneeId) options.assigneeId = assigneeId;            // assign the user if found
+  if (assigneeId == 'unassigned') options.assigneeId = null;  // unassign user by passing null, otherwise don't change current user
 
-  console.log('updateIssue payload:', JSON.stringify(options))
+  console.log('updateIssue payload:', JSON.stringify(options));
 
   const createPayload = await linearClient.issueUpdate(id, options);
 
