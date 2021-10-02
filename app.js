@@ -150,7 +150,7 @@ async function main() {
     if (gh_action == 'opened' || gh_action == 'reopened') {
       const new_comment = await octokit.issues.createComment({
         ...github.context.repo, issue_number: pull_request_number,
-        body: `[New Linear issue created for PR Review, please assign user label on the right 🤳](${createdIssueInfo.url})`
+        body: `[🍯 A new Linear issue was created for PR Review! Assign a reviewer and a user label on the right.](${createdIssueInfo.url})`
       });
     }
 
