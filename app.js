@@ -160,7 +160,7 @@ async function main() {
     console.log('issue in Done or Canceled state, wont update it');
 
   } else if (foundIssue && (userId != (foundIssue._assignee && foundIssue._assignee.id) || foundIssue._state.id != desiredStateId)) {
-    // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA (keep user)
+    // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired (keep user)
     console.log('issue already exists but needs updating, going to update it');
     let res = await updateIssue(
       foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId,
@@ -203,7 +203,7 @@ async function updateIssue(id, title, teamId, parentId, cycleId, description, as
     labelIds: [labelId],
   };
 
-  if (assigneeId) options.assigneeId = assigneeId;            // assign the user if found
+  if (assigneeId) options.assigneeId = assigneeId;            // assign the user if found otherwise retain assigned user
   if (assigneeId == 'unassigned') options.assigneeId = null;  // unassign user by passing null, otherwise don't change current user
 
   console.log('updateIssue payload:', JSON.stringify(options));
