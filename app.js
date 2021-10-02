@@ -74,7 +74,7 @@ async function main() {
 
   // check label from action
   let usernameFoundInRootLabel = true;
-  const usernameFromLabel = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
+  let usernameFromLabel = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
   console.log(`gh_label username: '${usernameFromLabel}' from: '${gh_label}'`);
 
   // handle 'labeled': skip task if no user found in current action label
