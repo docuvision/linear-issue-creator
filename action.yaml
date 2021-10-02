@@ -30,7 +30,10 @@ inputs:
     description: 'Github Token'
     required: true
     default: ''
-
+  debug:
+    description: 'Debug'
+    required: false
+    default: 'false'
 outputs:
   url: # url output
     description: 'The url of the created issue'
