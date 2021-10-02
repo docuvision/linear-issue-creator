@@ -122,9 +122,9 @@ async function main() {
 
     const createdIssueInfo = await linearIssueGet(res._issue.id);
     console.log('createdIssue url:', createdIssueInfo.url);
-    core.setOutput("url", createdIssueInfo.url);
+    core.setOutput("url", createdIssueInfo.url); // return url as ouput from action
 
-    // log the newly recreated url in PR comment
+    // add comment of linear url in the current PR
     const new_comment = octokit.issues.createComment({
       ...github.context.repo,
       issue_number: pull_request_number,
