@@ -9,15 +9,15 @@ const octokit = new github.GitHub(github_token);
 
 const linearKey = core.getInput('linear-key');
 const linearClient = new linear.LinearClient({ 'apiKey': linearKey }); // process.env.LINEAR_API_KEY
-const dueInDays = parseInt(core.getInput('due-in-days'));
 const initialIssueState = core.getInput('issue-state');
 const issueLabel = core.getInput('issue-label');
+const dueInDays = parseInt(core.getInput('due-in-days'));
 const issuePriority = parseInt(core.getInput('priority'));
 const issueEstimate = parseInt(core.getInput('estimate'));
-
+const debug = core.getInput('debug') == 'true' ? true : false;
 
 const payload = JSON.stringify(github.context.payload, undefined, 2);
-console.log(payload);
+if (debug) console.log(payload);
 
 // fill in values from payload
 const gh_action = github.context.payload.action; // labeled, unlabeled, (no label in root) closed, opened, reopened
