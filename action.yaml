@@ -26,6 +26,11 @@ inputs:
     description: 'Issue estimate'
     required: false
     default: '2'
+  GITHUB_TOKEN:
+    description: 'Github Token'
+    required: true
+    default: ''
+
 outputs:
   url: # url output
     description: 'The url of the created issue'

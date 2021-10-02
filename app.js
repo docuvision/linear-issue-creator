@@ -4,6 +4,9 @@ const linear = require("@linear/sdk");
 
 let statesCache = {};
 
+const github_token = core.getInput('GITHUB_TOKEN');
+const octokit = new github.GitHub(github_token);
+
 const linearKey = core.getInput('linear-key');
 const linearClient = new linear.LinearClient({ 'apiKey': linearKey }); // process.env.LINEAR_API_KEY
 const dueInDays = parseInt(core.getInput('due-in-days'));
@@ -12,18 +15,18 @@ const issueLabel = core.getInput('issue-label');
 const issuePriority = parseInt(core.getInput('priority'));
 const issueEstimate = parseInt(core.getInput('estimate'));
 
+
 const payload = JSON.stringify(github.context.payload, undefined, 2);
 console.log(payload);
 
 // fill in values from payload
 const gh_action = github.context.payload.action; // labeled, unlabeled, closed (no label in root)
 const gh_label = github.context.payload.label && github.context.payload.label.name || null; // 'review_req_dani3lsz'
-//process.env.GITHUB_HEAD_REF == "refs/heads/feature/doc-490-evaluate-pull-request-deployment-of"
 const branch = github.context.payload.pull_request && github.context.payload.pull_request.head && github.context.payload.pull_request.head.ref; // feature/fe-2379-testing-fe-linear
 const PRClosed = gh_action == 'closed' ? true : false;
 const reviewState = github.context.payload.review && github.context.payload.review.state; // approved, commented, changes_requested
 const isMerged = !!(github.context.payload.pull_request && github.context.payload.pull_request.merged);
-// const changesRequested = true; // does it have a trigger?
+const pull_request_number = github.context.payload.pull_request && github.context.payload.pull_request.number;
 
 // ACTIONS: labeled, unlabeled, closed (no label in root), submitted (no label in root)
 // {
@@ -67,11 +70,31 @@ async function main() {
     desiredState = initialIssueState;
   }
 
+  const assignUser = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
+  console.log(`user: ${assignUser} from ${gh_label}`);
+
+  // skip task if no user found in label
+  if ((gh_action == 'labeled' || gh_action == 'unlabeled') && !assignUser) {
+    console.log('no user found in label, not a good lable. exiting action');
+    return;
+  }
+
+  // find the user by username string
+  const user = await linearUserFind(assignUser);
+  let userId = user && user.id; // userId is null if not found
+  console.log('userId:', userId);
+
+  // unsign the user from the ticket if that label contains a real username
+  if (gh_action == 'unlabeled' && userId) {
+    console.log('user found unlabeled, going to unassign them');
+    userId = 'unassigned';
+  }
+
   console.log('desiredState:', desiredState);
   const desiredStateId = await getStateId(_teamId, desiredState); // get the id of that state
   const doneStateId = await getStateId(_teamId, 'Done'); // get the id of that state
 
-  const labelId = await getLabelId(_teamId, issueLabel); // in the team find get label id
+  const labelId = await getLabelId(_teamId, issueLabel); // in the team find get label id "PR Review"
 
   const createIssueTitle = `🍯 PR Review: ${branch}`;
   const description = `# [${github.context.payload.pull_request.title}](${github.context.payload.pull_request.html_url})
@@ -84,48 +107,43 @@ async function main() {
   commits: **${github.context.payload.pull_request.commits}**
   `;
 
-  const assignUser = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
-  console.log(`user: ${assignUser} from ${gh_label}`);
-
   let dueDay = new Date(new Date());
   dueDay.setDate(dueDay.getDate() + dueInDays);
   if (!dueInDays || dueDay <= 0) dueDay = null;
-
-  if ((gh_action == 'labeled' || gh_action == 'unlabeled') && !assignUser) {
-    console.log('no user found in label, not a good lable. exiting action');
-    return;
-  }
-
-  // find the user by username string
-  const user = await linearUserFind(assignUser);
-  let userId = user && user.id; // userId is null if not found
-  console.log('userId:', userId);
-
-  // unsign the user from the ticket if that label contains a real username
-  if (gh_action == 'unlabeled' && userId)
-    userId = 'unassigned';
 
   // find issue with title with parent id
   const foundIssue = await linearIssueFind(createIssueTitle, _parentId);
 
   if (!foundIssue) {  // create subissue
     console.log('creating new sub issue');
-    await createIssue(
+    let res = await createIssue(
       createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay
     );
 
+    const createdIssueInfo = await linearIssueGet(res._issue.id);
+    console.log('createdIssue url:', createdIssueInfo.url);
+    core.setOutput("url", createdIssueInfo.url);
+
+    // log the newly recreated url in PR comment
+    const new_comment = octokit.issues.createComment({
+      ...github.context.repo,
+      issue_number: pull_request_number,
+      body: `PR Review Ticket created: ${createdIssueInfo.url}`
+    });
+
   } else if (doneStateId == foundIssue._state.id) { // if issue is in Done state, dont do anything to it
-    console.log('issue is in Done state, wont update it');
+    console.log('issue in Done state, wont update it');
 
   } else if (foundIssue && (userId != (foundIssue._assignee && foundIssue._assignee.id) || foundIssue._state.id != desiredStateId)) {
     // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired Todo -> QA (keep user)
-    console.log('sub issue already there, going to update it');
-    await updateIssue(foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId,
+    console.log('issue already there, going to update it');
+    let res = await updateIssue(
+      foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId,
       desiredStateId, labelId, issuePriority, issueEstimate, dueDay
     );
 
   } else {
-    console.log('sub issue already exists');
+    console.log('issue already exists, do nothing');
   }
 
   console.log('done');
@@ -143,7 +161,7 @@ async function createIssue(title, teamId, parentId, cycleId, description, assign
 
   if (createPayload.success) {
     console.log(createPayload);
-    return createPayload;
+    return createdIssueInfo;
   } else {
     return new Error("Failed to create issue");
   }
@@ -261,6 +279,10 @@ async function getLabelId(teamId, desiredLabel) {
   }
 
   return label.id;
+}
+
+async function linearIssueGet(issueId) {
+  return await linearClient.issue(issueId)
 }
 
 // run main
