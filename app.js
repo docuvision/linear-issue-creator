@@ -98,6 +98,7 @@ async function main() {
   // find the user by username string
   const user = await linearUserFind(assignUser);
   let userId = user && user.id; // userId is null if not found
+  console.log('userId:', userId);
 
   // unsign the user from the ticket if that label contains a real username
   if (gh_action == 'unlabeled' && userId)
