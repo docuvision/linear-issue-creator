@@ -56,10 +56,11 @@ async function main() {
   const _cycleId = issue._cycle && issue._cycle.id || null;
 
   let desiredState;
-  // if PRClosed == true we set to 'QA'
+  // if PRClosed we set to 'QA'
   // if PRClosed and !isMerged set to 'Canceled'
   // if reviewState == 'approve' we set to 'QA'
-  // if reviewState == 'changes requested' we set to 'Todo'
+  // if reviewState == 'changes requested' we set to 'Changes Requested'
+  // all others set to inital state defined in action (Todo)
   if (PRClosed && !isMerged) {
     desiredState = 'Canceled';
   } else if (PRClosed || reviewState == 'approved') {
@@ -73,28 +74,28 @@ async function main() {
   const assignUser = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
   console.log(`user: ${assignUser} from ${gh_label}`);
 
-  // skip task if no user found in label
+  // skip task if no user found in label - only labled has label data
   if ((gh_action == 'labeled' || gh_action == 'unlabeled') && !assignUser) {
     console.log('no user found in label, not a good lable. exiting action');
     return;
   }
 
-  // find the user by username string
+  // find the linear user by username
   const user = await linearUserFind(assignUser);
   let userId = user && user.id; // userId is null if not found
   console.log('userId:', userId);
 
-  // unsign the user from the ticket if that label contains a real username
+  // unassign the user from the ticket if that label contains an existing user
   if (gh_action == 'unlabeled' && userId) {
-    console.log('user found unlabeled, going to unassign them');
+    console.log('user found and unlabeled action, going to unassign them from issue');
     userId = 'unassigned';
   }
 
   console.log('desiredState:', desiredState);
-  const desiredStateId = await getStateId(_teamId, desiredState); // get the id of that state
-  const doneStateId = await getStateId(_teamId, 'Done'); // get the id of that state
+  const desiredStateId = await getStateId(_teamId, desiredState); // get the id state
+  const doneStateId = await getStateId(_teamId, 'Done'); // get the id state
 
-  const labelId = await getLabelId(_teamId, issueLabel); // in the team find get label id "PR Review"
+  const labelId = await getLabelId(_teamId, issueLabel); // in this team, get label id for strng "PR Review"
 
   const createIssueTitle = `🍯 PR Review: ${branch}`;
   const description = `# [${github.context.payload.pull_request.title}](${github.context.payload.pull_request.html_url})
@@ -111,12 +112,12 @@ async function main() {
   dueDay.setDate(dueDay.getDate() + dueInDays);
   if (!dueInDays || dueDay <= 0) dueDay = null;
 
-  // set parent issue state if 'Changes Requested' in reviewState
+  // set parent issue state to Changes Requested if reviewState is 'Changes Requested'
   if (desiredState == 'Changes Requested') {
-    await setIssueStatus(_parentId, desiredStateId)
+    await setIssueStatus(_parentId, desiredStateId);
   }
 
-  // find issue with title with parent id
+  // find issue with title and parent id
   const foundIssue = await linearIssueFind(createIssueTitle, _parentId);
 
   if (!foundIssue) {  // create new issue
@@ -129,9 +130,9 @@ async function main() {
     console.log('createdIssue url:', createdIssueInfo.url);
     core.setOutput("url", createdIssueInfo.url); // return url as ouput from action
 
-    // add comment of linear url in the current PR if opened, (rarely reopened)
+    // add comment of linear url in the current PR if opened or reopened action
     if (gh_action == 'opened' || gh_action == 'reopened') {
-      const new_comment = octokit.issues.createComment({
+      const new_comment = await octokit.issues.createComment({
         ...github.context.repo, issue_number: pull_request_number,
         body: `[New Linear issue created for PR Review, please assign user label on the right 🤳](${createdIssueInfo.url})`
       });
@@ -309,7 +310,7 @@ async function getLabelId(teamId, desiredLabel) {
 }
 
 async function linearIssueGet(issueId) {
-  return await linearClient.issue(issueId)
+  return await linearClient.issue(issueId);
 }
 
 // run main
