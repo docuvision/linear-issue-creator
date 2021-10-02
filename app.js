@@ -84,6 +84,7 @@ async function main() {
   `;
 
   const assignUser = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
+  console.log(`user: ${assignUser} from ${gh_label}`);
 
   let dueDay = new Date(new Date());
   dueDay.setDate(dueDay.getDate() + dueInDays);
@@ -205,7 +206,7 @@ function parse_user_label(label) {
   if (!label) return null;
 
   const re = /^review_req_(.*)/;
-  // console.log(label.match(re));
+  console.log(label.match(re));
   return label.match(re) && label.match(re)[1];
 }
 
