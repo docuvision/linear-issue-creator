@@ -86,7 +86,7 @@ async function main() {
 
   // if we can't get username from 'labeled/unlabeled' action's root label then look into existing PR labels array
   if (!usernameFromLabel) {
-    console.log('gh_label username not found, falling back to existing labels')
+    console.log('gh_label username not found, falling back to existing labels');
     usernameFoundInRootLabel = false;
     const assignedUserLabel = findUserLabelInPR(pull_request_labels);
     if (assignedUserLabel) {
@@ -289,8 +289,15 @@ function parse_user_label(label) {
 
 function findUserLabelInPR(labels) {
   // find first username assigned in PRs existing labeles array
-  let foundLabel = labels.find((label) => parse_user_label(label.name) != null);
-  return foundLabel && foundLabel.name && parse_user_label(foundLabel.name) || null;
+  let foundLabel = null;
+  labels.some((label) => {
+    let parsed_user = parse_user_label(label.name);
+    if (parsed_user) {
+      foundLabel = parsed_user;
+      return true;
+    }
+  });
+  return foundLabel;
 }
 
 async function getStateId(team, desiredState) {
