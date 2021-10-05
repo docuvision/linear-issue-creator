@@ -3,6 +3,7 @@ const github = require('@actions/github');
 const linear = require("@linear/sdk");
 
 let statesCache = {};
+let stateIds = {};
 
 const github_token = core.getInput('GITHUB_TOKEN');
 const octokit = new github.GitHub(github_token);
@@ -16,6 +17,14 @@ const issuePriority = parseInt(core.getInput('priority'));
 const issueEstimate = parseInt(core.getInput('estimate'));
 const debug = core.getInput('debug') == 'true' ? true : false;
 
+// map of GH user to Linear display user
+const userMap = {
+  'teebu': 'yuriy',
+  'juviwhale': 'juviwhale',
+  'thisFunction': 'adam',
+  'dani3lsz': 'dani3lsz'
+};
+
 const payload = JSON.stringify(github.context.payload, undefined, 2);
 if (debug) console.log(payload);
 
@@ -23,11 +32,14 @@ if (debug) console.log(payload);
 const gh_action = github.context.payload.action; // labeled, unlabeled, (no label in root) closed, opened, reopened
 const gh_label = github.context.payload.label && github.context.payload.label.name || null; // 'review_req_dani3lsz'
 const branch = github.context.payload.pull_request && github.context.payload.pull_request.head && github.context.payload.pull_request.head.ref; // feature/fe-2379-testing-fe-linear
-const PRClosed = gh_action == 'closed' ? true : false;
 const reviewState = github.context.payload.review && github.context.payload.review.state; // approved, commented, changes_requested
 const isMerged = !!(github.context.payload.pull_request && github.context.payload.pull_request.merged);
 const pull_request_number = github.context.payload.pull_request && github.context.payload.pull_request.number;
 const pull_request_labels = github.context.payload.pull_request && github.context.payload.pull_request.labels;
+const usernameFromSender = github.context.payload.sender && github.context.payload.sender.login;
+const linearUsernameFromSender = userMap[usernameFromSender] || usernameFromSender; // convert GH username to Linear display name
+const usernameFromRequestedReviewer = github.context.payload.requested_reviewer && github.context.payload.requested_reviewer.login;
+const linearUsernameFromRequestedReviewer = userMap[usernameFromRequestedReviewer] || usernameFromRequestedReviewer;  // convert GH username to Linear display name
 
 // ACTIONS: labeled, unlabeled, closed (no label in root), submitted (no label in root)
 // {
@@ -50,78 +62,84 @@ async function main() {
   }
 
   const issue = await linearClient.issue(issueId);
-  console.log(issue);
+  console.log('parent issue title:', issue.title);
 
   const _teamId = issue._team.id;
   const _parentId = issue.id;
   const _cycleId = issue._cycle && issue._cycle.id || null;
 
   let desiredState;
-  // if PRClosed we set to 'QA'
-  // if PRClosed and !isMerged set to 'Canceled'
-  // if reviewState == 'approve' we set to 'QA'
-  // if reviewState == 'changes requested' we set to 'Changes Requested'
+  // if gh_action closed and !isMerged set all issues to 'Canceled'
+  // if gh_action closed we set all issues to 'QA'
+  // if gh_action submitted and reviewState == 'approve' we set to 'QA' for sender's username
+  // if gh_action submitted and reviewState == 'changes requested' we set to 'Changes Requested' for sender username
   // all others set to inital state defined in action (Todo)
-  if (PRClosed && !isMerged) {
+  if (gh_action == 'closed' && !isMerged) {
     desiredState = 'Canceled';
-  } else if (PRClosed || reviewState == 'approved') {
+  } else if (gh_action == 'closed' || reviewState == 'approved') {
     desiredState = 'QA';
   } else if (reviewState == 'changes_requested') {
     desiredState = 'Changes Requested';
+  } else if (gh_action == 'review_requested') {
+    desiredState = initialIssueState;
   } else {
     desiredState = initialIssueState;
   }
 
   // check label from action
   let usernameFoundInRootLabel = true;
-  let usernameFromLabel = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
-  console.log(`gh_label username: '${usernameFromLabel}' from: '${gh_label}'`);
+  let username = parse_user_label(gh_label); // 'review_req_yuriy' - linear display names
+  console.log(`gh_label username: ${username} from: ${gh_label}`);
 
   // handle 'labeled': skip task if no user found in current action label
   // note: only labled action has the label data in root
-  if ((gh_action == 'labeled' || gh_action == 'unlabeled') && !usernameFromLabel) {
+  if ((gh_action == 'labeled' || gh_action == 'unlabeled') && !username) {
     console.log('no user found in labeled action, not a good lable. exiting action');
     return;
   }
 
-  // if we can't get username from 'labeled/unlabeled' action's root label then look into existing PR labels array
-  if (!usernameFromLabel) {
-    console.log('gh_label username not found, falling back to existing labels');
+  // if we can't get username from 'labeled/unlabeled' action's root label then look into action sender username
+  if (!username) {
     usernameFoundInRootLabel = false;
-    const assignedUserLabel = findUserLabelInPR(pull_request_labels);
-    if (assignedUserLabel) {
-      console.log(`existing labels username found in labels: '${assignedUserLabel}'`);
-      usernameFromLabel = assignedUserLabel;
-    }
+    console.log('gh_label username not detected, falling back to gh action sender login username');
+    console.log(`sender username: ${usernameFromSender} -> linear username: ${linearUsernameFromSender}`);
+    username = linearUsernameFromSender;
+  }
+
+  if (linearUsernameFromRequestedReviewer && gh_action == 'review_requested') {
+    usernameFoundInRootLabel = false;
+    console.log('gh_action is review_requested, will use username from requested_reviewer login username');
+    console.log(`review_requested username: ${usernameFromRequestedReviewer} -> linear username: ${linearUsernameFromRequestedReviewer}`);
+    username = linearUsernameFromSender;
   }
 
   // find the linear user by username
-  const user = await linearUserFind(usernameFromLabel);
+  const user = await linearUserFind(username);
   let userId = user && user.id; // userId is null if not found
-  console.log('userId:', userId);
+  console.log(`linear username: ${username} -> userId: ${userId}`);
 
-  // handle 'unlabeled': unassign the user from the ticket if that root label contains an existing user
+  // handle 'unlabeled': cancel the issue
   if (gh_action == 'unlabeled' && usernameFoundInRootLabel && userId) {
-    console.log('user found and unlabeled action, going to unassign them from issue');
-    userId = 'unassigned';
+    console.log('user found and unlabeled action, going to cancel the issue');
+    desiredState = 'Canceled'; // Cancel the issue
   }
 
+  console.log('usernameFoundInRootLabel:', usernameFoundInRootLabel);
   console.log('desiredState:', desiredState);
   const desiredStateId = await getStateId(_teamId, desiredState); // get the id state
-  const doneStateId = await getStateId(_teamId, 'Done'); // get the id state
-  const canceledStateId = await getStateId(_teamId, 'Canceled'); // get the id state
+  stateIds.Done = await getStateId(_teamId, 'Done'); // get the id state
+  stateIds.Canceled = await getStateId(_teamId, 'Canceled'); // get the id state
 
-  const labelId = await getLabelId(_teamId, issueLabel); // in this team, get label id for strng "PR Review"
+  const labelId = await getLabelId(_teamId, issueLabel); // in this team, get label id for string "PR Review"
 
-  const createIssueTitle = `🍯 PR Review: ${branch}`;
-  const description = `# [${github.context.payload.pull_request.title}](${github.context.payload.pull_request.html_url})
-  *${github.context.payload.pull_request.created_at}*
+  const createIssueTitle = `🕵🏽‍♂️ ${branch}`;
+  const description = `
+  > # [${github.context.payload.pull_request.title}](${github.context.payload.pull_request.html_url})
   
   ${github.context.payload.pull_request.body}
   
   ----------------------------------------
-  changed files: **${github.context.payload.pull_request.changed_files}**
-  commits: **${github.context.payload.pull_request.commits}**
+  \`Changed files: ${github.context.payload.pull_request.changed_files} Commits: ${github.context.payload.pull_request.commits} @ ${github.context.payload.pull_request.created_at}\`
   `;
 
   let dueDay = new Date(new Date());
@@ -130,51 +148,59 @@ async function main() {
 
   // set parent issue state if 'Changes Requested' in reviewState
   if (desiredState == 'Changes Requested') {
-    await setIssueStatus(_parentId, desiredStateId);
+    console.log('setting parent issue to Changes Requested');
+    await setIssueStateId(_parentId, desiredStateId);
   }
 
-  // find issue with title and parent id
-  const foundIssue = await linearIssueFind(createIssueTitle, _parentId);
+  // find issue with title and parentId and userId
+  const foundIssues = await linearIssueFind(createIssueTitle);
+  const filteredIssuesByParent = linearIssueFilter(foundIssues, _parentId);
+  const filteredIssuesByUserId = linearIssueFilter(foundIssues, _parentId, userId);
 
-  if (!foundIssue) {  // create new issue
+  // sub issue settings
+  const options = {
+    title: createIssueTitle, teamId: _teamId,
+    parentId: _parentId, cylceId: _cycleId, description: description,
+    desiredStateId: desiredStateId, labelId: labelId,
+    priority: issuePriority, estimate: issueEstimate, dueDay
+  };
+
+  // if issue doesn't exist with that userId assigned and it obtained username from labeled event or sender's login, create sub issue
+  if (filteredIssuesByUserId.length == 0 && userId && (usernameFoundInRootLabel == true || reviewState == 'approved' || reviewState == 'changes_requested')) {
+    // create new issue only if userId is found in labeled event
+    // or if a user approved or requested_changes  (name obtained from sender's login username)
     console.log('creating new issue');
-    let createPayload = await createIssue(
-      createIssueTitle, _teamId, _parentId, _cycleId, description, userId, desiredStateId, labelId, issuePriority, issueEstimate, dueDay
-    );
+    options.assigneeId = userId; // assign issue to userId
+    let createPayload = await createIssue(options);
 
     const createdIssueInfo = await linearIssueGet(createPayload._issue.id);
-    console.log('createdIssue url:', createdIssueInfo.url);
+    console.log(`createdIssue url: ${createdIssueInfo.url} for username: ${username}`,);
     core.setOutput("url", createdIssueInfo.url); // return url as ouput from action
 
     // add comment of linear url in the current PR if opened or reopened action
-    if (gh_action == 'opened' || gh_action == 'reopened') {
-      const new_comment = await octokit.issues.createComment({
-        ...github.context.repo, issue_number: pull_request_number,
-        body: `[🍯 A new Linear issue was created for PR Review! Assign a reviewer and a user label on the right.](${createdIssueInfo.url})`
-      });
-    }
+    const new_comment = await octokit.issues.createComment({
+      ...github.context.repo, issue_number: pull_request_number,
+      body: `[🕵🏽‍♂️ A new Linear issue was created for PR Review for ${username}](${createdIssueInfo.url})`
+    });
 
-  } else if (gh_action != 'reopened' && (doneStateId == foundIssue._state.id || canceledStateId == foundIssue._state.id)) {
-    // if action is not reopened: we'll allow reopening of closed issues
-    // if issue is Done or Cancelled dont do anything to it
-    console.log('issue in Done or Canceled state, wont update it');
+  } else if (filteredIssuesByParent.length > 0 && (gh_action == 'closed' || gh_action == 'reopened')) {
+    // set desired state id for all the sub issues when PR is closed or reopened
+    console.log(`${filteredIssuesByParent.length} issues found, going to update them to ${desiredState} if needed`);
+    await updateIssues(filteredIssuesByParent, options);
 
-  } else if (foundIssue && (userId != (foundIssue._assignee && foundIssue._assignee.id) || foundIssue._state.id != desiredStateId)) {
-    // if issue exists but assignee doesnt match, update issue with new assignee's id or if the issue state is different then desired (keep user)
-    console.log('issue already exists but needs updating, going to update it');
-    let res = await updateIssue(
-      foundIssue.id, createIssueTitle, _teamId, _parentId, _cycleId, description, userId,
-      desiredStateId, labelId, issuePriority, issueEstimate, dueDay
-    );
+  } else if (filteredIssuesByUserId.length > 0 && userId) {
+    // if issue exists update issue with new assignee's id or if the issue state is different then desired
+    console.log(`${filteredIssuesByUserId.length} issues found, going to update them to ${desiredState} if needed`);
+    await updateIssues(filteredIssuesByUserId, options);
 
   } else {
-    console.log('issue already exists, do nothing');
+    console.log('do nothing');
   }
 
   console.log('done');
 }
 
-async function createIssue(title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
+async function createIssue({ title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate }) {
   // Create a subissue for label and assignee
   const options = {
     title, teamId, parentId, cycleId, description, priority, estimate, dueDate,
@@ -198,7 +224,7 @@ async function createIssue(title, teamId, parentId, cycleId, description, assign
   }
 }
 
-async function updateIssue(id, title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate) {
+async function updateIssue(id, { title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate }) {
 
   const options = {
     title, teamId, parentId, cycleId, description, priority, estimate, dueDate,
@@ -207,7 +233,6 @@ async function updateIssue(id, title, teamId, parentId, cycleId, description, as
   };
 
   if (assigneeId) options.assigneeId = assigneeId;            // assign the user if found otherwise retain assigned user
-  if (assigneeId == 'unassigned') options.assigneeId = null;  // unassign user by passing null, otherwise don't change current user
 
   console.log('updateIssue payload:', JSON.stringify(options));
 
@@ -221,10 +246,11 @@ async function updateIssue(id, title, teamId, parentId, cycleId, description, as
   }
 }
 
-// update the state of for issue by id
-async function setIssueStatus(id, desiredStateId) {
+
+async function setIssueStateId(id, desiredStateId) {
+  // update the state of for issue by id
   const options = {
-    stateId: desiredStateId, // issue status (Changes Reqested)
+    stateId: desiredStateId, // state id that represents a string (Changes Reqested)
   };
 
   console.log('setIssueStatus payload:', JSON.stringify(options));
@@ -239,11 +265,43 @@ async function setIssueStatus(id, desiredStateId) {
   }
 }
 
-async function linearIssueFind(title, parentId) {
-  const { nodes: found } = await linearClient.issueSearch(title);
-  if (found.length === 0) return null;
+async function setIssuesStateId(issues, desiredStateId) {
+  // loop for each issue and update state ids
+  for (const issue of issues) {
+    if (issue._state.id == stateIds.Done) {
+      // do nothing if Done or Canceled
+    } else {
+      await setIssueStateId(issue.id, desiredStateId);
+    }
+  }
+}
 
-  return found.find((issue) => issue._parent.id === parentId) || null;
+async function updateIssues(issues, options) {
+  // update all issues found with same data from PR if updates needed
+  for (const issue of issues) {
+    if (issue._state.id == stateIds.Done) {
+      // do nothing if Done
+      console.log(`${issue._state.id} not going to change, already done`);
+    } else if (issue._state.id != options.desiredStateId) {
+      console.log(`updating: ${issue._state.id}`);
+      await updateIssue(issue.id, options);
+    }
+  }
+}
+
+async function linearIssueFind(title) {
+  const { nodes: found } = await linearClient.issueSearch(title);
+  return found;
+}
+
+function linearIssueFilter(linearIssues = [], parentId, userId = null) {
+  return linearIssues.filter((issue) => {
+    if (userId) {
+      return issue._parent.id === parentId && issue._assignee.id == userId;
+    } else {
+      return issue._parent.id === parentId;
+    }
+  });
 }
 
 async function linearUserFind(userName) {
@@ -328,7 +386,7 @@ async function linearWorkflowStatesList(teamId) {
       }),
     )
   ).filter((state) => state !== null);
-  statesCache[teamId.key] = teamStates;
+  statesCache[teamId] = teamStates;
   return teamStates;
 }
 

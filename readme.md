@@ -61,16 +61,17 @@ jobs:
 ```
 
 If the issue is in 'Done' state no action occurs.
-If the issue is in 'Canceled' state, only a 'reopened' event will set it back to 'Todo'.
 
-- action: created PR -> creates an unassigned sub issue when a PR is opened with default values and description
-- action: labeled -> checks the label and if username is found then assigns that user to the sub issue 
-- action: unlabeled -> removes an assignee from the issue
-- action: closed PR -> sets 'Canceled' state on the sub issue
-- action: closed PR with merge -> marks the sub issue 'QA'
-- action: reviewed PR as 'approved' -> marks the sub issue 'QA'
-- action: reviewed PR as 'changes_requested' -> marks sub issue and parent issue as 'Changes Requested'
-- action: reopened a closed PR -> sub issue set to default state 'Todo'
+- action: `created` PR -> (draft or not) does nothing
+- action: `labeled` -> checks the label and if username is found then creates a sub issue assigned to that username and creates message in gh
+- action: `unlabeled` -> cancels the ticket for that assigned username
+- action: `closed` PR -> sets 'Canceled' state all the sub issues
+- action: `closed` PR with merge -> marks all the sub issue for that PR as 'QA'
+- action: `reopened` a closed PR -> all the sub issues that are not Done for that PR are set to default state 'Todo'
+- action: `submitted` reviewed PR as 'approved' -> sets the sub issue for that gh action sender's linear username as 'QA' (will create issue if one doesn't exist)
+- action: `submitted` reviewed PR as 'changes_requested' -> marks the gh action sender's assigned user sub issue and parent issue as 'Changes Requested' (will create issue if one doesn't exist)
+- action: `review_requested` (re-requested event) -> finds existing issues with the sender's username and sets them to 'Todo'
+
 
 ## Release Tags:
 ```
