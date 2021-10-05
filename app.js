@@ -281,7 +281,7 @@ async function setIssuesStateId(issues, desiredStateId) {
   // loop for each issue and update state ids
   for (const issue of issues) {
     if (issue._state.id == stateIds.Done) {
-      // do nothing if Done or Canceled
+      // do nothing if Done
     } else {
       await setIssueStateId(issue.id, desiredStateId);
     }
