@@ -122,7 +122,7 @@ async function main() {
     usernameFoundInRootLabel = false;
     console.log('gh_action is review_requested, will use username from requested_reviewer login username');
     console.log(`review_requested username: ${usernameFromRequestedReviewer} -> linear username: ${linearUsernameFromRequestedReviewer}`);
-    username = linearUsernameFromSender;
+    username = linearUsernameFromRequestedReviewer;
   }
 
   // find the linear user by username
@@ -144,7 +144,7 @@ async function main() {
 
   const labelId = await getLabelId(_teamId, issueLabel); // in this team, get label id for string "PR Review"
 
-  const createIssueTitle = `🕵🏽‍♂️ ${branch}`;
+  const createIssueTitle = `🕵🏽‍♂️ PR Review: ${branch}`;
   const description = `
   > # [${github.context.payload.pull_request.title}](${github.context.payload.pull_request.html_url})
   
