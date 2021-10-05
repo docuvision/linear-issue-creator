@@ -356,7 +356,6 @@ function parse_user_label(label) {
   return label.match(re) && label.match(re)[1];
 }
 
-
 function findUserLabelInPR(labels) {
   // find first username assigned in PRs existing labeles array
   let foundLabel = null;
