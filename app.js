@@ -171,10 +171,9 @@ async function main() {
 
   // sub issue settings
   const options = {
-    title: createIssueTitle, teamId: _teamId,
-    parentId: _parentId, cycleId: _cycleId, description: description,
-    desiredStateId: desiredStateId, labelId: labelId,
-    priority: issuePriority, estimate: issueEstimate, dueDay
+    title: createIssueTitle, teamId: _teamId, parentId: _parentId, cycleId: _cycleId,
+    description: description, desiredStateId: desiredStateId, labelId: labelId,
+    priority: issuePriority, estimate: issueEstimate, dueDate: dueDay
   };
 
   // if issue doesn't exist with that userId assigned and it obtained username from labeled event or sender's login, create sub issue
