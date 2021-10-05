@@ -19,10 +19,22 @@ const debug = core.getInput('debug') == 'true' ? true : false;
 
 // map of GH user to Linear display user
 const userMap = {
+  // GH -> Linear
   'teebu': 'yuriy',
   'juviwhale': 'juviwhale',
   'thisFunction': 'adam',
-  'dani3lsz': 'dani3lsz'
+  'dani3lsz': 'dani3lsz',
+  'to-ph': 'to-ph',
+  'caerulescens': 'andrew',
+  'jernejc': 'jernej',
+  'tigrankh': 'tigran',
+  'Naltharial': 'primoz',
+  'MHafez': 'mahmoud',
+  'roman-right': 'roman',
+  'dubbalubagis': 'tyler',
+  'asemOT': 'asem',
+  'skaterdav85': 'dtang',
+  'jkantner': 'jkanter',
 };
 
 const payload = JSON.stringify(github.context.payload, undefined, 2);
