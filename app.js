@@ -370,11 +370,11 @@ function findUserLabelInPR(labels) {
   return foundLabel;
 }
 
-async function getStateId(team, desiredState) {
-  const availabelStatesInTeam = await linearWorkflowStatesList(team);
+async function getStateId(teamId, desiredState) {
+  const availabelStatesInTeam = await linearWorkflowStatesList(teamId);
   const foundState = availabelStatesInTeam.find((state) => state.name === desiredState);
   if (!foundState) {
-    throw new Error(`Not found state "${foundState}" in team ${team.name} ${team.key}`);
+    throw new Error(`Not found state "${foundState}" in team ${teamId}`);
   }
 
   return foundState.id;
