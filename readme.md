@@ -19,7 +19,7 @@ Issue state (Todo). Default `Todo`.
 Label assigned to issue (PR Review). Default `none`.
 
 ### `priority`
-The linear API key. Default `2`.
+Issue priority. Default `2`.
 
 ### `estimate`
 Issue estimate. Default `2`.
@@ -28,7 +28,7 @@ Issue estimate. Default `2`.
 **Required** Github Token. Default `none`.
 
 ### `debug`
-The linear API key. Default `false`.
+Default `false`.
 
 
 ## Outputs
