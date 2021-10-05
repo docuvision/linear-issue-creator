@@ -34,7 +34,7 @@ const userMap = {
   'dubbalubagis': 'tyler',
   'asemOT': 'asem',
   'skaterdav85': 'dtang',
-  'jkantner': 'jkanter',
+  'jkantner': 'jkantner',
 };
 
 const payload = JSON.stringify(github.context.payload, undefined, 2);
