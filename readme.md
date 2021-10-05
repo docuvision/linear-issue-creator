@@ -70,7 +70,7 @@ If the issue is in 'Done' state no action occurs.
 - action: `reopened` a closed PR -> all the sub issues that are not Done for that PR are set to default state 'Todo'
 - action: `submitted` reviewed PR as 'approved' -> sets the sub issue for that gh action sender's linear username as 'QA' (will create issue if one doesn't exist)
 - action: `submitted` reviewed PR as 'changes_requested' -> marks the gh action sender's assigned user sub issue and parent issue as 'Changes Requested' (will create issue if one doesn't exist)
-- action: `review_requested` (re-requested event) -> finds existing issues with the sender's username and sets them to 'Todo'
+- action: `review_requested` (re-requested event) -> finds existing issues with the requested_reviewer's username and sets them to 'Todo' (linear intergration resets parent ticket to review state)
 
 
 ## Release Tags:
