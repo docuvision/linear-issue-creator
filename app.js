@@ -172,7 +172,7 @@ async function main() {
   // sub issue settings
   const options = {
     title: createIssueTitle, teamId: _teamId,
-    parentId: _parentId, cylceId: _cycleId, description: description,
+    parentId: _parentId, cycleId: _cycleId, description: description,
     desiredStateId: desiredStateId, labelId: labelId,
     priority: issuePriority, estimate: issueEstimate, dueDay
   };
