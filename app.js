@@ -151,7 +151,7 @@ async function main() {
   ${github.context.payload.pull_request.body}
   
   ----------------------------------------
-  \`Changed files: ${github.context.payload.pull_request.changed_files} Commits: ${github.context.payload.pull_request.commits} @ ${github.context.payload.pull_request.created_at}\`
+  \`Changed files: ${github.context.payload.pull_request.changed_files || 0} Commits: ${github.context.payload.pull_request.commits || 0} @ ${github.context.payload.pull_request.created_at}\`
   `;
 
   let dueDay = new Date(new Date());
