@@ -67,6 +67,10 @@ async function main() {
   const issueId = parse_ref(branch);
   console.log('issueId:', issueId);
   console.log('gh_action:', gh_action);
+  console.log('issueId:', issueId);
+  console.log('gh_action:', gh_action);
+  console.log('reviewState:', reviewState);
+  console.log('isMerged:', isMerged);
 
   if (!issueId) {
     console.log('Unable to detect issueId from branch name');
@@ -129,6 +133,10 @@ async function main() {
   const user = await linearUserFind(username);
   let userId = user && user.id; // userId is null if not found
   console.log(`linear username: ${username} -> userId: ${userId}`);
+
+  if (!userId) {
+    throw new Error(`user id not found for ${username}`);
+  }
 
   // handle 'unlabeled': cancel the issue
   if (gh_action == 'unlabeled' && usernameFoundInRootLabel && userId) {
