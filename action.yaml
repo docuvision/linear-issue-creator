@@ -25,7 +25,7 @@ inputs:
   estimate:
     description: 'Issue estimate'
     required: false
-    default: '2'
+    default: '1'
   GITHUB_TOKEN:
     description: 'Github Token'
     required: true
