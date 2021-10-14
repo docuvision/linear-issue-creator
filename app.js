@@ -55,7 +55,7 @@ const linearUsernameFromRequestedReviewer = userMap[usernameFromRequestedReviewe
 
 const prTitle = github.context.payload.pull_request && github.context.payload.pull_request.title;
 const prNumber = github.context.payload.number;
-const prHtmlUrl = github.context.payload.html_url;
+const prHtmlUrl = github.context.payload.pull_request && github.context.payload.pull_request.html_url
 const additions = github.context.payload.pull_request && github.context.payload.pull_request.additions;
 const deletions = github.context.payload.pull_request && github.context.payload.pull_request.deletions;
 const commits = github.context.payload.pull_request && github.context.payload.pull_request.commits;
