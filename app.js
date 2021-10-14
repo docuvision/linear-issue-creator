@@ -63,7 +63,7 @@ const changedFiles = github.context.payload.pull_request && github.context.paylo
 const prCreatedAt = github.context.payload.pull_request && github.context.payload.pull_request.created_at // '2021-10-14T15:43:54Z'
 const changes = additions + deletions || 0;
 const prSize = getSizeOfPR(changes);
-const prUser = github.context.payload.pull_request && github.context.payload.user && github.context.payload.user.login
+const prUser = github.context.payload.pull_request && github.context.payload.pull_request.user && github.context.payload.pull_request.user.login
 const linearUsernameFromPrUser = userMap[prUser] || prUser;  // convert GH username to Linear display name
 
 // ACTIONS: labeled, unlabeled, closed (no label in root), submitted (no label in root)
