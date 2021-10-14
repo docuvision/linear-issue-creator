@@ -53,17 +53,17 @@ const linearUsernameFromSender = userMap[usernameFromSender] || usernameFromSend
 const usernameFromRequestedReviewer = github.context.payload.requested_reviewer && github.context.payload.requested_reviewer.login;
 const linearUsernameFromRequestedReviewer = userMap[usernameFromRequestedReviewer] || usernameFromRequestedReviewer;  // convert GH username to Linear display name
 
-const prTitle = github.context.payload.pull_request && github.context.payload.pull_request.title
-const prNumber = github.context.payload.number
-const prHtmlUrl = github.context.payload.html_url
-const additions = github.context.payload.pull_request && github.context.payload.pull_request.additions
-const deletions = github.context.payload.pull_request && github.context.payload.pull_request.deletions
-const commits = github.context.payload.pull_request && github.context.payload.pull_request.commits
-const changedFiles = github.context.payload.pull_request && github.context.payload.pull_request.changed_files
-const prCreatedAt = github.context.payload.pull_request && github.context.payload.pull_request.created_at // '2021-10-14T15:43:54Z'
+const prTitle = github.context.payload.pull_request && github.context.payload.pull_request.title;
+const prNumber = github.context.payload.number;
+const prHtmlUrl = github.context.payload.html_url;
+const additions = github.context.payload.pull_request && github.context.payload.pull_request.additions;
+const deletions = github.context.payload.pull_request && github.context.payload.pull_request.deletions;
+const commits = github.context.payload.pull_request && github.context.payload.pull_request.commits;
+const changedFiles = github.context.payload.pull_request && github.context.payload.pull_request.changed_files;
+const prCreatedAt = github.context.payload.pull_request && github.context.payload.pull_request.created_at; // '2021-10-14T15:43:54Z'
 const changes = additions + deletions || 0;
 const prSize = getSizeOfPR(changes);
-const prUser = github.context.payload.pull_request && github.context.payload.pull_request.user && github.context.payload.pull_request.user.login
+const prUser = github.context.payload.pull_request && github.context.payload.pull_request.user && github.context.payload.pull_request.user.login;
 const linearUsernameFromPrUser = userMap[prUser] || prUser;  // convert GH username to Linear display name
 
 // ACTIONS: labeled, unlabeled, closed (no label in root), submitted (no label in root)
