@@ -211,8 +211,8 @@ ${prBody}
     priority: issuePriority, estimate: issueEstimate, dueDate: dueDay
   };
 
-  // only set description for labeled/unlabeled events
-  if (gh_action == 'labeled' || gh_action == 'unlabeled') {
+  // only set description for PRs that contain PR data
+  if (commits > 0 && additions >= 0 && deletions >= 0) {
     options.description = description;
   }
 
