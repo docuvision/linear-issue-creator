@@ -15,7 +15,7 @@ const issueLabel = core.getInput('issue-label');
 const dueInDays = parseInt(core.getInput('due-in-days'));
 const issuePriority = parseInt(core.getInput('priority'));
 const issueEstimate = parseInt(core.getInput('estimate'));
-const debug = core.getInput('debug') == 'true' ? true : false;
+const debug = core.getInput('debug') === 'true';
 
 // map of GH user to Linear display user
 const userMap = {
@@ -53,6 +53,19 @@ const linearUsernameFromSender = userMap[usernameFromSender] || usernameFromSend
 const usernameFromRequestedReviewer = github.context.payload.requested_reviewer && github.context.payload.requested_reviewer.login;
 const linearUsernameFromRequestedReviewer = userMap[usernameFromRequestedReviewer] || usernameFromRequestedReviewer;  // convert GH username to Linear display name
 
+const prTitle = github.context.payload.pull_request && github.context.payload.pull_request.title
+const prNumber = github.context.payload.number
+const prHtmlUrl = github.context.payload.html_url
+const additions = github.context.payload.pull_request && github.context.payload.pull_request.additions
+const deletions = github.context.payload.pull_request && github.context.payload.pull_request.deletions
+const commits = github.context.payload.pull_request && github.context.payload.pull_request.commits
+const changedFiles = github.context.payload.pull_request && github.context.payload.pull_request.changed_files
+const prCreatedAt = github.context.payload.pull_request && github.context.payload.pull_request.created_at // '2021-10-14T15:43:54Z'
+const changes = additions + deletions || 0;
+const prSize = getSizeOfPR(changes);
+const prUser = github.context.payload.pull_request && github.context.payload.user && github.context.payload.user.login
+const linearUsernameFromPrUser = userMap[prUser] || prUser;  // convert GH username to Linear display name
+
 // ACTIONS: labeled, unlabeled, closed (no label in root), submitted (no label in root)
 // {
 //   "action": "unlabeled",
@@ -65,8 +78,6 @@ const linearUsernameFromRequestedReviewer = userMap[usernameFromRequestedReviewe
 
 async function main() {
   const issueId = parse_ref(branch);
-  console.log('issueId:', issueId);
-  console.log('gh_action:', gh_action);
   console.log('issueId:', issueId);
   console.log('gh_action:', gh_action);
   console.log('reviewState:', reviewState);
@@ -87,16 +98,18 @@ async function main() {
   let desiredState;
   // if gh_action closed and !isMerged set all issues to 'Canceled'
   // if gh_action closed we set all issues to 'QA'
-  // if gh_action submitted and reviewState == 'approve' we set to 'QA' for sender's username
-  // if gh_action submitted and reviewState == 'changes requested' we set to 'Changes Requested' for sender username
-  // all others set to inital state defined in action (Todo)
-  if (gh_action == 'closed' && !isMerged) {
+  // if gh_action submitted and reviewState === 'approve' we set to 'Done' for sender's username
+  // if gh_action submitted and reviewState === 'changes requested' we set to 'Changes Requested' for sender username
+  // all others set to initial state defined in action (Todo)
+  if (gh_action === 'closed' && !isMerged) {
     desiredState = 'Canceled';
-  } else if (gh_action == 'closed' || reviewState == 'approved') {
+  } else if (gh_action === 'closed') {
     desiredState = 'QA';
-  } else if (reviewState == 'changes_requested') {
+  } else if (reviewState === 'approved') {
+    desiredState = 'Done';
+  } else if (reviewState === 'changes_requested') {
     desiredState = 'Changes Requested';
-  } else if (gh_action == 'review_requested') {
+  } else if (gh_action === 'review_requested') {
     desiredState = initialIssueState;
   } else {
     desiredState = initialIssueState;
@@ -109,7 +122,7 @@ async function main() {
 
   // handle 'labeled': skip task if no user found in current action label
   // note: only labled action has the label data in root
-  if ((gh_action == 'labeled' || gh_action == 'unlabeled') && !username) {
+  if ((gh_action === 'labeled' || gh_action === 'unlabeled') && !username) {
     console.log('no user found in labeled action, not a good lable. exiting action');
     return;
   }
@@ -122,7 +135,7 @@ async function main() {
     username = linearUsernameFromSender;
   }
 
-  if (linearUsernameFromRequestedReviewer && gh_action == 'review_requested') {
+  if (linearUsernameFromRequestedReviewer && gh_action === 'review_requested') {
     usernameFoundInRootLabel = false;
     console.log('gh_action is review_requested, will use username from requested_reviewer login username');
     console.log(`review_requested username: ${usernameFromRequestedReviewer} -> linear username: ${linearUsernameFromRequestedReviewer}`);
@@ -139,7 +152,7 @@ async function main() {
   }
 
   // handle 'unlabeled': cancel the issue
-  if (gh_action == 'unlabeled' && usernameFoundInRootLabel && userId) {
+  if (gh_action === 'unlabeled' && usernameFoundInRootLabel && userId) {
     console.log('user found and unlabeled action, going to cancel the issue');
     desiredState = 'Canceled'; // Cancel the issue
   }
@@ -152,22 +165,36 @@ async function main() {
 
   const labelId = await getLabelId(_teamId, issueLabel); // in this team, get label id for string "PR Review"
 
-  const createIssueTitle = `🕵🏽‍♂️ PR Review: ${branch}`;
-  const description = `
-  > # [${github.context.payload.pull_request.title}](${github.context.payload.pull_request.html_url})
-  
-  ${github.context.payload.pull_request.body}
-  
-  ----------------------------------------
-  \`Changed files: ${github.context.payload.pull_request.changed_files || 0} Commits: ${github.context.payload.pull_request.commits || 0} @ ${github.context.payload.pull_request.created_at}\`
-  `;
+  const createIssueTitle = `🕵🏽‍♂️ PR Review -> ${prSize.toUpperCase()} ${prTitle}`;
+  const description = `> ### → ${prSize.toUpperCase()} Review Requested by **${linearUsernameFromSender}**
+
+#### PR Summary
+
+* \`PR #:\` [${prNumber}](${prHtmlUrl})
+* \`Created:\` **${humanReadableDate(prCreatedAt)}**
+* \`PR Authors:\` ***${linearUsernameFromPrUser}***
+* \`Review Requested at:\` **${humanReadableDate()}**
+* \`Review Requester:\` ***${linearUsernameFromSender}***
+* \`Size:\` ***${prSize}***
+  * \`# of Commits:\` ***${commits}***
+  * \`# of Changed Files:\` ***${changedFiles}***
+  * \`# of Lines Added:\` ***${additions}***
+  * \`# of Lines Removed:\` ***${deletions}***
+
+-------------------------------------------------------------
+[${prTitle}](${prHtmlUrl})
+    
+Some text here
+to describe the PR
+and more text
+`;
 
   let dueDay = new Date(new Date());
   dueDay.setDate(dueDay.getDate() + dueInDays);
   if (!dueInDays || dueDay <= 0) dueDay = null;
 
   // set parent issue state if 'Changes Requested' in reviewState
-  if (desiredState == 'Changes Requested') {
+  if (desiredState === 'Changes Requested') {
     console.log('setting parent issue to Changes Requested');
     await setIssueStateId(_parentId, desiredStateId);
   }
@@ -179,13 +206,19 @@ async function main() {
 
   // sub issue settings
   const options = {
-    title: createIssueTitle, teamId: _teamId, parentId: _parentId, cycleId: _cycleId,
-    description: description, desiredStateId: desiredStateId, labelId: labelId,
+    title: createIssueTitle, teamId: _teamId,
+    parentId: _parentId, cycleId: _cycleId,
+    desiredStateId: desiredStateId, labelId: labelId,
     priority: issuePriority, estimate: issueEstimate, dueDate: dueDay
   };
 
+  // only set description for labeled/unlabeled events
+  if (gh_action == 'labeled' || gh_action == 'unlabeled') {
+    options.description = description;
+  }
+
   // if issue doesn't exist with that userId assigned and it obtained username from labeled event or sender's login, create sub issue
-  if (filteredIssuesByUserId.length == 0 && userId && (usernameFoundInRootLabel == true || reviewState == 'approved' || reviewState == 'changes_requested')) {
+  if (filteredIssuesByUserId.length === 0 && userId && (usernameFoundInRootLabel === true || reviewState === 'approved' || reviewState === 'changes_requested')) {
     // create new issue only if userId is found in labeled event
     // or if a user approved or requested_changes  (name obtained from sender's login username)
     console.log('creating new issue');
@@ -202,7 +235,7 @@ async function main() {
       body: `[🕵🏽‍♂️ A new Linear issue was created for PR Review for ${username}](${createdIssueInfo.url})`
     });
 
-  } else if (filteredIssuesByParent.length > 0 && (gh_action == 'closed' || gh_action == 'reopened')) {
+  } else if (filteredIssuesByParent.length > 0 && (gh_action === 'closed' || gh_action === 'reopened')) {
     // set desired state id for all the sub issues when PR is closed or reopened
     console.log(`${filteredIssuesByParent.length} issues found, going to update them to ${desiredState} if needed`);
     await updateIssues(filteredIssuesByParent, options);
@@ -219,7 +252,10 @@ async function main() {
   console.log('done');
 }
 
-async function createIssue({ title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate }) {
+async function createIssue({
+                             title, teamId, parentId, cycleId, description, assigneeId,
+                             desiredStateId, labelId, priority, estimate, dueDate
+                           }) {
   // Create a subissue for label and assignee
   const options = {
     title, teamId, parentId, cycleId, description, priority, estimate, dueDate,
@@ -228,7 +264,7 @@ async function createIssue({ title, teamId, parentId, cycleId, description, assi
   };
 
   if (assigneeId) options.assigneeId = assigneeId;            // assign the user if found
-  if (assigneeId == 'unassigned') options.assigneeId = null;  // unassign user by passing null, otherwise don't change current user
+  if (assigneeId === 'unassigned') options.assigneeId = null;  // unassign user by passing null, otherwise don't change current user
 
   console.log('createIssue payload:', JSON.stringify(options));
 
@@ -243,7 +279,19 @@ async function createIssue({ title, teamId, parentId, cycleId, description, assi
   }
 }
 
-async function updateIssue(id, { title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate }) {
+async function updateIssue(id, {
+  title,
+  teamId,
+  parentId,
+  cycleId,
+  description,
+  assigneeId,
+  desiredStateId,
+  labelId,
+  priority,
+  estimate,
+  dueDate
+}) {
 
   const options = {
     title, teamId, parentId, cycleId, description, priority, estimate, dueDate,
@@ -264,7 +312,6 @@ async function updateIssue(id, { title, teamId, parentId, cycleId, description, 
     return new Error("Failed to update issue");
   }
 }
-
 
 async function setIssueStateId(id, desiredStateId) {
   // update the state of for issue by id
@@ -287,7 +334,7 @@ async function setIssueStateId(id, desiredStateId) {
 async function setIssuesStateId(issues, desiredStateId) {
   // loop for each issue and update state ids
   for (const issue of issues) {
-    if (issue._state.id == stateIds.Done) {
+    if (issue._state.id === stateIds.Done) {
       // do nothing if Done
     } else {
       await setIssueStateId(issue.id, desiredStateId);
@@ -298,7 +345,7 @@ async function setIssuesStateId(issues, desiredStateId) {
 async function updateIssues(issues, options) {
   // update all issues found with same data from PR if updates needed
   for (const issue of issues) {
-    if (issue._state.id == stateIds.Done) {
+    if (issue._state.id === stateIds.Done) {
       // do nothing if Done
       console.log(`${issue._state.id} not going to change, already done`);
     } else if (issue._state.id != options.desiredStateId) {
@@ -316,7 +363,7 @@ async function linearIssueFind(title) {
 function linearIssueFilter(linearIssues = [], parentId, userId = null) {
   return linearIssues.filter((issue) => {
     if (userId) {
-      return issue._parent.id === parentId && issue._assignee.id == userId;
+      return issue._parent.id === parentId && issue._assignee.id === userId;
     } else {
       return issue._parent.id === parentId;
     }
@@ -336,7 +383,7 @@ async function linearUserFind(userName) {
   );
   if (found.length === 0) return null;
 
-  return found.find((user) => user.displayName.toLowerCase() == userName.toLowerCase()) || null;
+  return found.find((user) => user.displayName.toLowerCase() === userName.toLowerCase()) || null;
 }
 
 // parse title, body, ref of git pull request and get the 'doc-id'
@@ -422,6 +469,28 @@ async function getLabelId(teamId, desiredLabel) {
 
 async function linearIssueGet(issueId) {
   return await linearClient.issue(issueId);
+}
+
+function getSizeOfPR(changes) {
+  // size determined by additions and deletions
+  if (changes < 20) {
+    return 'Small';
+  } else if (changes >= 20 && changes <= 100) {
+    return 'Medium';
+  } else if (changes > 100 && changes <= 200) {
+    return 'Large';
+  } else if (changes > 200) {
+    return 'X-Large';
+  }
+
+  // undetermined size
+  return 'Small';
+}
+
+function humanReadableDate(datestring) {
+  const options = { year: "numeric", month: "long", day: "numeric" };
+  if (datestring) return new Date(datestring).toLocaleDateString(undefined, options);
+  else return new Date().toLocaleDateString(undefined, options);
 }
 
 // run main
