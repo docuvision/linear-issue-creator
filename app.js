@@ -185,7 +185,7 @@ async function main() {
 -------------------------------------------------------------
 [${prTitle}](${prHtmlUrl})
     
-${prBody}
+${prBody || 'No description provided.'}
 `;
 
   let dueDay = new Date(new Date());
