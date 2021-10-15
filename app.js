@@ -172,7 +172,8 @@ async function main() {
   console.log(`sub issue title: ${createIssueTitle}`);
 
   const description = `
-> ### → ${prSize.toUpperCase()} Review Requested by **${linearUsernameFromSender}**
+> # **${prSize.toUpperCase()}** → ${prTitle}  
+> #### Review Requested by **${linearUsernameFromSender}**
 
 #### PR Summary
 
