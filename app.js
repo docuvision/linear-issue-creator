@@ -166,7 +166,7 @@ async function main() {
 
   const labelId = await getLabelId(_teamId, issueLabel); // in this team, get label id for string "PR Review"
 
-  const createIssueTitle = `🕵🏽‍♂️ PR Review -> ${prSize.toUpperCase()} ${prTitle}`;
+  const createIssueTitle = `🕵🏽‍♂️ PR Review -> ${prTitle}`;
   const description = `> ### → ${prSize.toUpperCase()} Review Requested by **${linearUsernameFromSender}**
 
 #### PR Summary
