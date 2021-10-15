@@ -166,9 +166,13 @@ async function main() {
 
   const labelId = await getLabelId(_teamId, issueLabel); // in this team, get label id for string "PR Review"
 
-  // feature/be-123-some-neat-feature -> 'some neat feature'
-  const createIssueTitle = `🕵🏽‍♂️ PR Review -> ${branch.replace(/feature\/([a-z]{2,3}-\d+)\b-?/ig,'').replace(/-/g,' ').trim()}`;
-  const description = `> ### → ${prSize.toUpperCase()} Review Requested by **${linearUsernameFromSender}**
+  let cleanIssueTitle = branch.replace(/feature\/([a-z]{2,3}-\d+)\b-?/ig, '').replace(/-/g, ' ');
+  let createIssueTitle = `🕵🏽‍♂️ PR Review -> ${cleanIssueTitle}`;
+  createIssueTitle = createIssueTitle.replace(/ +(?= )/g, '').trim(); // cleanup spaces
+  console.log(`sub issue title: ${createIssueTitle}`);
+
+  const description = `
+> ### → ${prSize.toUpperCase()} Review Requested by **${linearUsernameFromSender}**
 
 #### PR Summary
 
@@ -206,8 +210,7 @@ ${prBody}
 
   // sub issue settings
   const options = {
-    title: createIssueTitle, teamId: _teamId,
-    parentId: _parentId, cycleId: _cycleId,
+    title: createIssueTitle, teamId: _teamId, parentId: _parentId, cycleId: _cycleId,
     desiredStateId: desiredStateId, labelId: labelId,
     priority: issuePriority, estimate: issueEstimate, dueDate: dueDay
   };
@@ -253,8 +256,8 @@ ${prBody}
 }
 
 async function createIssue({
-                             title, teamId, parentId, cycleId, description, assigneeId,
-                             desiredStateId, labelId, priority, estimate, dueDate
+                             title, teamId, parentId, cycleId, description, assigneeId, desiredStateId,
+                             labelId, priority, estimate, dueDate
                            }) {
   // Create a subissue for label and assignee
   const options = {
@@ -280,17 +283,7 @@ async function createIssue({
 }
 
 async function updateIssue(id, {
-  title,
-  teamId,
-  parentId,
-  cycleId,
-  description,
-  assigneeId,
-  desiredStateId,
-  labelId,
-  priority,
-  estimate,
-  dueDate
+  title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate
 }) {
 
   const options = {
@@ -473,6 +466,8 @@ async function linearIssueGet(issueId) {
 
 function getSizeOfPR(changes) {
   // size determined by additions and deletions
+  if (changes === 0) return '';
+
   if (changes < 20) {
     return 'Small';
   } else if (changes >= 20 && changes <= 100) {
@@ -481,10 +476,10 @@ function getSizeOfPR(changes) {
     return 'Large';
   } else if (changes > 200) {
     return 'X-Large';
+  } else {
+    // fallback
+    return '';
   }
-
-  // undetermined size
-  return 'Small';
 }
 
 function humanReadableDate(datestring) {
