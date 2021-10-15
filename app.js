@@ -362,9 +362,9 @@ async function linearIssueFind(title) {
 function linearIssueFilter(linearIssues = [], parentId, userId = null) {
   return linearIssues.filter((issue) => {
     if (userId) {
-      return issue._parent.id === parentId && issue._assignee.id === userId;
+      return issue._parent && issue._parent.id === parentId && issue._assignee.id === userId;
     } else {
-      return issue._parent.id === parentId;
+      return issue._parent && issue._parent.id === parentId;
     }
   });
 }
