@@ -56,7 +56,7 @@ const linearUsernameFromRequestedReviewer = userMap[usernameFromRequestedReviewe
 const prTitle = github.context.payload.pull_request && github.context.payload.pull_request.title;
 const prNumber = github.context.payload.number;
 const prHtmlUrl = github.context.payload.pull_request && github.context.payload.pull_request.html_url;
-const prBody = github.context.payload.pull_request && github.context.payload.pull_request.body;
+const prBody = github.context.payload.pull_request && github.context.payload.pull_request.body || 'No description provided.';
 const additions = github.context.payload.pull_request && github.context.payload.pull_request.additions;
 const deletions = github.context.payload.pull_request && github.context.payload.pull_request.deletions;
 const commits = github.context.payload.pull_request && github.context.payload.pull_request.commits;
@@ -185,7 +185,7 @@ async function main() {
 -------------------------------------------------------------
 [${prTitle}](${prHtmlUrl})
     
-${prBody || 'No description provided.'}
+${prBody}
 `;
 
   let dueDay = new Date(new Date());
