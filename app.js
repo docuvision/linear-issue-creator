@@ -25,7 +25,7 @@ const userMap = {
   'thisFunction': 'adam',
   'dani3lsz': 'dani3lsz',
   'to-ph': 'to-ph',
-  'caerulescens': 'andrew',
+  'caerulescens': 'caerulescens',
   'jernejc': 'jernej',
   'tigrankh': 'tigran',
   'Naltharial': 'primoz',
