@@ -341,7 +341,7 @@ async function updateIssues(issues, options) {
   for (const issue of issues) {
     if (issue._state.id === stateIds.Done) {
       // console.log(`${issue._state.id} not going to change, already done`);
-      console.log(`isse was Done. Updating it to: ${issue._state.id}`);
+      console.log(`issue was Done. Updating it to: ${issue._state.id}`);
       await updateIssue(issue.id, options);
     } else if (issue._state.id != options.desiredStateId) {
       console.log(`updating: ${issue._state.id}`);
