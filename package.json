@@ -1,6 +1,6 @@
 {
   "name": "linear_issue_creator",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Creates a issue to a related linear ticket for a PR",
   "main": "app.js",
   "scripts": {
