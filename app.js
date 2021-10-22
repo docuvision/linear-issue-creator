@@ -340,8 +340,9 @@ async function updateIssues(issues, options) {
   // update all issues found with same data from PR if updates needed
   for (const issue of issues) {
     if (issue._state.id === stateIds.Done) {
-      // do nothing if Done
-      console.log(`${issue._state.id} not going to change, already done`);
+      // console.log(`${issue._state.id} not going to change, already done`);
+      console.log(`isse was Done. Updating it to: ${issue._state.id}`);
+      await updateIssue(issue.id, options);
     } else if (issue._state.id != options.desiredStateId) {
       console.log(`updating: ${issue._state.id}`);
       await updateIssue(issue.id, options);
