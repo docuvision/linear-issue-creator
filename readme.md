@@ -60,7 +60,7 @@ jobs:
           debug: true
 ```
 
-If the issue is in 'Done' state no action occurs.
+If the issue is in 'Done' state no action occurs (a re-review request sets it back to default Todo)
 
 - action: `created` PR -> (draft or not) does nothing
 - action: `labeled` -> checks the label and if username is found then creates a sub issue assigned to that username and creates message in gh
@@ -70,7 +70,7 @@ If the issue is in 'Done' state no action occurs.
 - action: `reopened` a closed PR -> all the sub issues that are not Done for that PR are set to default state 'Todo'
 - action: `submitted` reviewed PR as 'approved' -> sets the sub issue for that gh action sender's linear username as 'QA' (will create issue if one doesn't exist)
 - action: `submitted` reviewed PR as 'changes_requested' -> marks the gh action sender's assigned user sub issue and parent issue as 'Changes Requested' (will create issue if one doesn't exist)
-- action: `review_requested` (re-requested event) -> finds existing issues with the requested_reviewer's username and sets them to 'Todo' (linear intergration resets parent ticket to review state)
+- action: `review_requested` (re-requested event) -> finds existing issues with the requested_reviewer's username and sets them to 'Todo' (linear integration resets parent ticket to review state)
 
 
 ## Release Tags:

@@ -293,7 +293,8 @@ async function updateIssue(id, {
     labelIds: [labelId],
   };
 
-  if (assigneeId) options.assigneeId = assigneeId;            // assign the user if found otherwise retain assigned user
+  // assign the user if found otherwise retain assigned user
+  if (assigneeId) options.assigneeId = assigneeId;
 
   console.log('updateIssue payload:', JSON.stringify(options));
 
@@ -326,10 +327,12 @@ async function setIssueStateId(id, desiredStateId) {
 }
 
 async function setIssuesStateId(issues, desiredStateId) {
-  // loop for each issue and update state ids
+  // not used - loop for each issue and update state ids
   for (const issue of issues) {
-    if (issue._state.id === stateIds.Done) {
-      // do nothing if Done
+    if (issue._state.id === stateIds.Done) { // probably dont want this anymore
+      // console.log(`${issue._state.id} not going to change, already done`);
+      console.log(`issue was Done. Updating it to: ${issue._state.id}`);
+      await setIssueStateId(issue.id, desiredStateId);
     } else {
       await setIssueStateId(issue.id, desiredStateId);
     }
@@ -393,8 +396,9 @@ function parse_ref(ref_head) {
   return ref_head.match(re) && ref_head.match(re)[0];
 }
 
-// parse gh label for reviewed request
+
 function parse_user_label(label) {
+  // parse gh label for reviewed request
   // review_req_yuriy
   console.log('parsing label:', label);
 
@@ -478,8 +482,7 @@ function getSizeOfPR(changes) {
     return 'Large';
   } else if (changes > 200) {
     return 'X-Large';
-  } else {
-    // fallback
+  } else { // fallback
     return '';
   }
 }
