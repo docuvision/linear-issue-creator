@@ -66,7 +66,7 @@ If the issue is in 'Done' state no action occurs (a re-review request sets it ba
 - action: `labeled` -> checks the label and if username is found then creates a sub issue assigned to that username and creates message in gh
 - action: `unlabeled` -> cancels the ticket for that assigned username
 - action: `closed` PR -> sets 'Canceled' state all the sub issues
-- action: `closed` PR with merge -> marks all the sub issue for that PR as 'QA'
+- action: `closed` PR with merge -> marks all the sub issue for that PR as 'Done'
 - action: `reopened` a closed PR -> all the sub issues that are not Done for that PR are set to default state 'Todo'
 - action: `submitted` reviewed PR as 'approved' -> sets the sub issue for that gh action sender's linear username as 'QA' (will create issue if one doesn't exist)
 - action: `submitted` reviewed PR as 'changes_requested' -> marks the gh action sender's assigned user sub issue and parent issue as 'Changes Requested' (will create issue if one doesn't exist)

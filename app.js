@@ -98,14 +98,14 @@ async function main() {
 
   let desiredState;
   // if gh_action closed and !isMerged set all issues to 'Canceled'
-  // if gh_action closed we set all issues to 'QA'
+  // if gh_action closed we set all issues to 'Done'
   // if gh_action submitted and reviewState === 'approve' we set to 'Done' for sender's username
   // if gh_action submitted and reviewState === 'changes requested' we set to 'Changes Requested' for sender username
   // all others set to initial state defined in action (Todo)
   if (gh_action === 'closed' && !isMerged) {
     desiredState = 'Canceled';
   } else if (gh_action === 'closed') {
-    desiredState = 'QA';
+    desiredState = 'Done';
   } else if (reviewState === 'approved') {
     desiredState = 'Done';
   } else if (reviewState === 'changes_requested') {
