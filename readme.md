@@ -1,4 +1,4 @@
-# Linear App Issue Creator github acton
+# Linear App Issue Creator GitHub acton
 
 This action creates a linear sub issue that is related to a linear ticket for a PR.
 
@@ -25,7 +25,7 @@ Issue priority. Default `2`.
 Issue estimate. Default `2`.
 
 ### `GITHUB_TOKEN`
-**Required** Github Token. Default `none`.
+**Required** GitHub Token. Default `none`.
 
 ### `debug`
 Default `false`.
@@ -72,6 +72,8 @@ If the issue is in 'Done' state no action occurs (a re-review request sets it ba
 - action: `submitted` reviewed PR as 'changes_requested' -> marks the gh action sender's assigned user sub issue and parent issue as 'Changes Requested' (will create issue if one doesn't exist)
 - action: `review_requested` (re-requested event) -> finds existing issues with the requested_reviewer's username and sets them to 'Todo' (linear integration resets parent ticket to review state)
 
+
+*note* when a changes requested changes the parent issue, it waits for manual intervention from the user to change it to something else after the changes are made.
 
 ## Release Tags:
 ```
