@@ -67,6 +67,8 @@ const prSize = getSizeOfPR(changes);
 const prUser = github.context.payload.pull_request && github.context.payload.pull_request.user && github.context.payload.pull_request.user.login;
 const linearUsernameFromPrUser = userMap[prUser] || prUser;  // convert GH username to Linear display name
 
+let activityLogMessage = null;
+
 // ACTIONS: labeled, unlabeled, closed (no label in root), submitted (no label in root)
 // {
 //   "action": "unlabeled",
@@ -141,6 +143,8 @@ async function main() {
     console.log('gh_action is review_requested, will use username from requested_reviewer login username');
     console.log(`review_requested username: ${usernameFromRequestedReviewer} -> linear username: ${linearUsernameFromRequestedReviewer}`);
     username = linearUsernameFromRequestedReviewer;
+    // logging message
+    activityLogMessage = `> **⚡ →** **@${linearUsernameFromSender}** 🙋🏻‍♂️requested a review from **@${linearUsernameFromRequestedReviewer}**`;
   }
 
   // find the linear user by username
@@ -152,14 +156,41 @@ async function main() {
     throw new Error(`user id not found for ${username}`);
   }
 
+  // ### logging messages
   // handle 'unlabeled': cancel the issue
   if (gh_action === 'unlabeled' && usernameFoundInRootLabel && userId) {
     console.log('user found and unlabeled action, going to cancel the issue');
     desiredState = 'Canceled'; // Cancel the issue
+    activityLogMessage = `> **⚡ →** **@${linearUsernameFromSender}** 🌊 has **removed** review request label for **@${username}**`;
   }
+
+  // handle 'labeled' event with valid user found in label
+  if (gh_action === 'labeled' && usernameFoundInRootLabel && userId) {
+    activityLogMessage = `> **⚡ →** **@${linearUsernameFromSender}** 🙋🏻‍♂️has **added** review request label for **@${username}**`;
+  }
+
+  // handle reviewState
+  if (reviewState === 'approved' || reviewState === 'changes_requested' && linearUsernameFromSender) {
+    let _action;
+    if (reviewState === 'approved') _action = '👍 approved';
+    else if (reviewState) _action = '🚼 requested changes'
+    activityLogMessage = `> **⚡ →** **@${linearUsernameFromSender}** has **${_action}** the PR`;
+  }
+
+  // handle gh_action closed, reopened
+  if (gh_action === 'closed' || gh_action === 'reopened') {
+    let _action;
+
+    if (gh_action === 'reopened') _action = '📂 reopened';
+    else if (gh_action === 'closed') _action = isMerged ? '🧬 merged/closed' : '❌ ~~cancelled~~';
+
+    activityLogMessage = `> **⚡ →** **@${linearUsernameFromSender}** has **${_action}** the PR`;
+  }
+
 
   console.log('usernameFoundInRootLabel:', usernameFoundInRootLabel);
   console.log('desiredState:', desiredState);
+
   const desiredStateId = await getStateId(_teamId, desiredState); // get the id state
   stateIds.Done = await getStateId(_teamId, 'Done'); // get the id state
   stateIds.Canceled = await getStateId(_teamId, 'Canceled'); // get the id state
@@ -239,15 +270,18 @@ ${prBody}
       body: `[🕵🏽‍♂️ A new Linear issue was created for PR Review for ${username}](${createdIssueInfo.url})`
     });
 
+    // add comment in created issue from activity log
+    await createComment(createPayload._issue.id, activityLogMessage);
+
   } else if (filteredIssuesByParent.length > 0 && (gh_action === 'closed' || gh_action === 'reopened')) {
     // set desired state id for all the sub issues when PR is closed or reopened
     console.log(`${filteredIssuesByParent.length} issues found, going to update them to ${desiredState} if needed`);
-    await updateIssues(filteredIssuesByParent, options);
+    await updateIssues(filteredIssuesByParent, options, activityLogMessage);
 
   } else if (filteredIssuesByUserId.length > 0 && userId) {
     // if issue exists update issue with new assignee's id or if the issue state is different then desired
     console.log(`${filteredIssuesByUserId.length} issues found, going to update them to ${desiredState} if needed`);
-    await updateIssues(filteredIssuesByUserId, options);
+    await updateIssues(filteredIssuesByUserId, options, activityLogMessage);
 
   } else {
     console.log('do nothing');
@@ -339,7 +373,7 @@ async function setIssuesStateId(issues, desiredStateId) {
   }
 }
 
-async function updateIssues(issues, options) {
+async function updateIssues(issues, options, activityLogMessage=null) {
   // update all issues found with same data from PR if updates needed
   for (const issue of issues) {
     if (issue._state.id === stateIds.Done) {
@@ -349,6 +383,10 @@ async function updateIssues(issues, options) {
     } else if (issue._state.id != options.desiredStateId) {
       console.log(`updating: ${issue._state.id}`);
       await updateIssue(issue.id, options);
+    }
+
+    if (activityLogMessage) {
+      await createComment(issue.id, activityLogMessage);
     }
   }
 }
@@ -464,6 +502,23 @@ async function getLabelId(teamId, desiredLabel) {
   }
 
   return label.id;
+}
+
+async function createComment(issueId, body) {
+  if (!issueId) {
+    console.log('no issueId detected, skipping posting comment');
+    return;
+  }
+
+  console.log('creating comment:', body);
+  const commentPayload = await linearClient.commentCreate({ issueId, body });
+  if (commentPayload.success) {
+    console.log(await commentPayload.comment);
+
+    return commentPayload.comment;
+  } else {
+    return new Error("Failed to create comment");
+  }
 }
 
 async function linearIssueGet(issueId) {
