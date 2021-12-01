@@ -1,6 +1,7 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
 const linear = require("@linear/sdk");
+const retry = require('async-retry');
 
 let statesCache = {};
 let stateIds = {};
@@ -549,8 +550,20 @@ function humanReadableDate(datestring) {
 }
 
 // run main
-main().catch((error) => {
-  console.error(error);
-  core.setFailed(error);
-  process.exit(-1);
-});
+// https://github.com/vercel/async-retry
+(async () => {
+  try {
+    await retry(
+      async (bail, num) => {
+        // if anything throws, we retry
+        console.log('attempt:', num)
+        await main();
+      },
+      { retries: 2 }
+    );
+  } catch (error) {
+    console.error('error from main:', error);
+    core.setFailed(error);
+    process.exit(-1);
+  }
+})();
