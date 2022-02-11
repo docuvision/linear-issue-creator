@@ -297,8 +297,7 @@ ${prBody}
   if (gh_action === 'closed' && isMerged) {
     const comment = `
 > # [${prTitle}](${prHtmlUrl})
-> **@${linearUsernameFromSender}** has **🧬 merged** the PR
-> ${humanReadableDate()}
+> **@${linearUsernameFromSender}** has **🧬 merged** the PR on ${humanReadableDate()}
 
 ${prBody}
 `;
