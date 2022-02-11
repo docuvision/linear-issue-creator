@@ -46,7 +46,10 @@ const gh_action = github.context.payload.action; // labeled, unlabeled, (no labe
 const gh_label = github.context.payload.label && github.context.payload.label.name || null; // 'review_req_dani3lsz'
 const branch = github.context.payload.pull_request && github.context.payload.pull_request.head && github.context.payload.pull_request.head.ref; // feature/fe-2379-testing-fe-linear
 const reviewState = github.context.payload.review && github.context.payload.review.state; // approved, commented, changes_requested
+
 const isMerged = !!(github.context.payload.pull_request && github.context.payload.pull_request.merged);
+const merged_at = github.context.payload.pull_request && github.context.payload.pull_request.merged_at;
+
 const pull_request_number = github.context.payload.pull_request && github.context.payload.pull_request.number;
 const pull_request_labels = github.context.payload.pull_request && github.context.payload.pull_request.labels;
 const usernameFromSender = github.context.payload.sender && github.context.payload.sender.login;
@@ -125,7 +128,7 @@ async function main() {
   console.log(`gh_label username: ${username} from: ${gh_label}`);
 
   // handle 'labeled': skip task if no user found in current action label
-  // note: only labled action has the label data in root
+  // note: only labeled action has the label data in root
   if ((gh_action === 'labeled' || gh_action === 'unlabeled') && !username) {
     console.log('no user found in labeled action, not a good lable. exiting action');
     return;
@@ -174,7 +177,7 @@ async function main() {
   if (reviewState === 'approved' || reviewState === 'changes_requested' && linearUsernameFromSender) {
     let _action;
     if (reviewState === 'approved') _action = '👍 approved';
-    else if (reviewState) _action = '🚼 requested changes'
+    else if (reviewState) _action = '🚼 requested changes';
     activityLogMessage = `> **⚡ →** **@${linearUsernameFromSender}** has **${_action}** the PR`;
   }
 
@@ -249,6 +252,7 @@ ${prBody}
   };
 
   // only set description for PRs that contain PR data
+  // triggers that have this data: synchronized, edited, opened, labeled, unlabeled
   if (commits > 0 && additions >= 0 && deletions >= 0) {
     options.description = description;
   }
@@ -263,7 +267,7 @@ ${prBody}
 
     const createdIssueInfo = await linearIssueGet(createPayload._issue.id);
     console.log(`createdIssue url: ${createdIssueInfo.url} for username: ${username}`,);
-    core.setOutput("url", createdIssueInfo.url); // return url as ouput from action
+    core.setOutput("url", createdIssueInfo.url); // return url as output from action
 
     // add comment of linear url in the current PR if opened or reopened action
     const new_comment = await octokit.issues.createComment({
@@ -288,6 +292,19 @@ ${prBody}
     console.log('do nothing');
   }
 
+    // create comment in main PR linear ticket with
+    // include: Merge date, Merge Commit name/link, Merged by, PR description at that point
+  if (gh_action === 'closed' && isMerged) {
+    const comment = `
+> # [${prTitle}](${prHtmlUrl})
+> **@${linearUsernameFromSender}** has **🧬 merged** the PR
+> ${humanReadableDate()}
+
+${prBody}
+`;
+    await createComment(_parentId, comment);
+  }
+
   console.log('done');
 }
 
@@ -302,8 +319,8 @@ async function createIssue({
     labelIds: [labelId],
   };
 
-  if (assigneeId) options.assigneeId = assigneeId;            // assign the user if found
-  if (assigneeId === 'unassigned') options.assigneeId = null;  // unassign user by passing null, otherwise don't change current user
+  if (assigneeId) options.assigneeId = assigneeId;              // assign the user if found
+  if (assigneeId === 'unassigned') options.assigneeId = null;   // unassign user by passing null, otherwise don't change current user
 
   console.log('createIssue payload:', JSON.stringify(options));
 
@@ -346,7 +363,7 @@ async function updateIssue(id, {
 async function setIssueStateId(id, desiredStateId) {
   // update the state of for issue by id
   const options = {
-    stateId: desiredStateId, // state id that represents a string (Changes Reqested)
+    stateId: desiredStateId, // state id that represents a string (Changes Requested)
   };
 
   console.log('setIssueStatus payload:', JSON.stringify(options));
@@ -374,14 +391,14 @@ async function setIssuesStateId(issues, desiredStateId) {
   }
 }
 
-async function updateIssues(issues, options, activityLogMessage=null) {
+async function updateIssues(issues, options, activityLogMessage = null) {
   // update all issues found with same data from PR if updates needed
   for (const issue of issues) {
     if (issue._state.id === stateIds.Done) {
       // console.log(`${issue._state.id} not going to change, already done`);
       console.log(`issue was Done. Updating it to: ${issue._state.id}`);
       await updateIssue(issue.id, options);
-    } else if (issue._state.id != options.desiredStateId) {
+    } else if (issue._state.id !== options.desiredStateId) {
       console.log(`updating: ${issue._state.id}`);
       await updateIssue(issue.id, options);
     }
@@ -449,7 +466,7 @@ function parse_user_label(label) {
 }
 
 function findUserLabelInPR(labels) {
-  // find first username assigned in PRs existing labeles array
+  // find first username assigned in PRs existing labels array
   let foundLabel = null;
   labels.some((label) => {
     let parsed_user = parse_user_label(label.name);
@@ -556,12 +573,13 @@ function humanReadableDate(datestring) {
     await retry(
       async (bail, num) => {
         // if anything throws, we retry
-        console.log('attempt:', num)
+        console.log('attempt:', num);
         await main();
       },
       { retries: 2 }
     );
-  } catch (error) {
+  }
+  catch (error) {
     console.error('error from main:', error);
     core.setFailed(error);
     process.exit(-1);
