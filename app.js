@@ -36,6 +36,11 @@ const userMap = {
   'asemOT': 'asem',
   'skaterdav85': 'dtang',
   'jkantner': 'jkantner',
+  'kkumar1-OT': 'kishan',
+  'amitnair1': 'abipin',
+  'hmudalagirigowda': 'hmudalagirigowda',
+  'OT-I-718': 'lbhukya',
+  'mkunhambu': 'mkunhambu',
 };
 
 const payload = JSON.stringify(github.context.payload, undefined, 2);
