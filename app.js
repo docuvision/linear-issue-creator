@@ -135,7 +135,7 @@ async function main() {
   // handle 'labeled': skip task if no user found in current action label
   // note: only labeled action has the label data in root
   if ((gh_action === 'labeled' || gh_action === 'unlabeled') && !username) {
-    console.log('no user found in labeled action, not a good lable. exiting action');
+    console.log('no user found in labeled action, not a good label. exiting action');
     return;
   }
 
@@ -256,6 +256,9 @@ ${prBody}
     priority: issuePriority, estimate: issueEstimate, dueDate: dueDay
   };
 
+  // subscribe parent ticket assignee to child PR tickets
+  if (_parentAssigneeId) options.subscriberIds = [_parentAssigneeId]
+
   // only set description for PRs that contain PR data
   // triggers that have this data: synchronized, edited, opened, labeled, unlabeled
   if (commits > 0 && additions >= 0 && deletions >= 0) {
@@ -314,7 +317,7 @@ ${prBody}
 
 async function createIssue({
                              title, teamId, parentId, cycleId, description, assigneeId, desiredStateId,
-                             labelId, priority, estimate, dueDate
+                             labelId, priority, estimate, dueDate, subscriberIds
                            }) {
   // Create a subissue for label and assignee
   const options = {
@@ -325,6 +328,7 @@ async function createIssue({
 
   if (assigneeId) options.assigneeId = assigneeId;              // assign the user if found
   if (assigneeId === 'unassigned') options.assigneeId = null;   // unassign user by passing null, otherwise don't change current user
+  if (subscriberIds) options.subscriberIds = subscriberIds;
 
   console.log('createIssue payload:', JSON.stringify(options));
 
@@ -339,9 +343,11 @@ async function createIssue({
   }
 }
 
-async function updateIssue(id, {
+async function updateIssue(issue, {
   title, teamId, parentId, cycleId, description, assigneeId, desiredStateId, labelId, priority, estimate, dueDate
 }) {
+
+  const id = issue.id;
 
   const options = {
     title, teamId, parentId, cycleId, description, priority, estimate, dueDate,
@@ -401,10 +407,10 @@ async function updateIssues(issues, options, activityLogMessage = null) {
     if (issue._state.id === stateIds.Done) {
       // console.log(`${issue._state.id} not going to change, already done`);
       console.log(`issue was Done. Updating it to: ${issue._state.id}`);
-      await updateIssue(issue.id, options);
+      await updateIssue(issue, options);
     } else if (issue._state.id !== options.desiredStateId) {
       console.log(`updating: ${issue._state.id}`);
-      await updateIssue(issue.id, options);
+      await updateIssue(issue, options);
     }
 
     if (activityLogMessage) {
@@ -518,7 +524,7 @@ async function getLabelId(teamId, desiredLabel) {
   // get labels for team
   const team = await linearClient.team(teamId);
   const { nodes: labels } = await team.labels();
-  label = labels.find((label) => label.name.toLowerCase() === desiredLabel.toLowerCase());
+  const label = labels.find((label) => label.name.toLowerCase() === desiredLabel.toLowerCase());
   if (!label) {
     throw new Error(`Not found label "${desiredLabel}" in team ${teamId}`);
   }
