@@ -105,6 +105,7 @@ async function main() {
 
   const _teamId = issue._team.id;
   const _parentId = issue.id;
+  const _parentAssigneeId = issue._assignee && issue._assignee.id || null;
   const _cycleId = issue._cycle && issue._cycle.id || null;
 
   let desiredState;
