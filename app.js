@@ -504,7 +504,7 @@ async function linearWorkflowStatesList(teamId) {
   if (statesCache && statesCache[teamId] && statesCache[teamId].length > 0) {
     return statesCache[teamId];
   }
-  const { nodes: states } = await linearClient.workflowStates({ first: 100 });
+  const { nodes: states } = await linearClient.workflowStates({ first: 250 });
   const teamStates = (
     await Promise.all(
       states.map(async (state) => {
