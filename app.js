@@ -499,6 +499,7 @@ async function getStateId(teamId, desiredState) {
   return foundState.id;
 }
 
+/*
 async function linearWorkflowStatesList(teamId) {
   // create a cache for states for team
   if (statesCache && statesCache[teamId] && statesCache[teamId].length > 0) {
@@ -519,6 +520,25 @@ async function linearWorkflowStatesList(teamId) {
   ).filter((state) => state !== null);
   statesCache[teamId] = teamStates;
   return teamStates;
+}
+*/
+
+async function linearWorkflowStatesList(teamId) {
+  // create a cache for states for team
+  if (statesCache && statesCache[teamId] && statesCache[teamId].length > 0) {
+    return statesCache[teamId];
+  }
+
+  const { nodes: states } = await linearClient.workflowStates({ first: 250 });
+
+  states.forEach(state => {
+    if (state._team.id && state) {
+      if (!statesCache[state._team.id]) statesCache[state._team.id] = [];
+      statesCache[state._team.id].push({ id: state.id, name: state.name });
+    }
+  });
+
+  return statesCache[teamId];
 }
 
 async function getLabelId(teamId, desiredLabel) {
