@@ -41,6 +41,7 @@ const userMap = {
   'hmudalagirigowda': 'hmudalagirigowda',
   'OT-I-718': 'lbhukya',
   'mkunhambu': 'mkunhambu',
+  'ksrinivasan': 'ot-ksrinivasan',
 };
 
 const payload = JSON.stringify(github.context.payload, undefined, 2);
